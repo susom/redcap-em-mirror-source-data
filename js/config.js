@@ -4,7 +4,6 @@ if(typeof ExternalModulesOptional === 'undefined') {
 
 
 ExternalModulesOptional.customTextAlert = function(textSelector) {
-
     textSelector.focus(function() {
         console.log($(this).val());
     });
