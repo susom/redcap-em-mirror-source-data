@@ -1,0 +1,98 @@
+{
+	"name": "Mirror Master Data",
+
+	"namespace":"Stanford\\MirrorMasterDataModule",
+
+	"description": "blah",
+
+	"versions": [
+		{ "0.1": "Initial Development Version" }
+	],
+
+	"authors": [
+		{
+			"name": "Andy Martin",
+			"email": "andy123@stanford.edu",
+			"institution": "Stanford University"
+		},
+		{
+			"name": "YongJae Lee",
+			"email": "jael@stanford.edu",
+			"institution": "Stanford University"
+		}
+	],
+
+	"permissions": [
+		"hook_save_record",
+		"hook_control_center",
+		"read from database",
+		"save to database"
+	],
+
+	"links": {
+		"control-center": [
+		],
+		"project": [
+			{
+				"name": "Mirror Master Data Module",
+				"icon": "gear",
+				"url": "project_level_homepage.php"
+			}
+		]
+	},
+
+	"system-settings": [
+	],
+	
+	"project-settings": [
+		{
+			"key": "master-event-name",
+			"name": "If longitudinal, enter the source event name",
+			"required": false,
+			"type": "event-list"
+		},
+		{
+			"key": "child-projects",
+			"name": "List of Child Projects to receieve Mirrored Data",
+			"required": true,
+			"type": "sub_settings",
+			"repeatable":true,
+			"sub_settings":[
+				{
+					"key": "mirror-logic",
+					"name": "Only clone if this logical expression is true (leave blank for always clone)",
+					"required": false,
+					"type": "text"
+				},
+				{
+					"key": "child-project-id",
+					"name": "Child Project",
+					"required": true,
+					"type": "project-id"
+				},
+				{
+					"key": "child-event-name",
+					"name": "Child Event Name (or blank if classical)",
+					"required": false,
+					"type": "custom",
+					"source": "js/config.js",
+					"functionName": "ExternalModulesOptional.getChildEvent"
+				},
+				{
+					"key": "exclude-fields",
+					"name": "Comma-separated list of fields to exclude from copying to child project(s)",
+					"required": false,
+					"type": "field-list",
+					"repeatable":true
+				},
+				{
+					"key": "include-only-fields",
+					"name": "Comma-separated list of fields to include - if specified ONLY these fields will be copied to the child project(s)",
+					"required": false,
+					"type": "field-list",
+					"repeatable":true
+				}
+			]
+		}
+	]
+}
