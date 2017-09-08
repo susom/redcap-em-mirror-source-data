@@ -25,8 +25,9 @@
 	"permissions": [
 		"hook_save_record",
 		"hook_control_center",
-		"read from database",
-		"save to database"
+		"select_data",
+		"update_data",
+		"delete_data"
 	],
 
 	"links": {
@@ -91,6 +92,48 @@
 					"required": false,
 					"type": "field-list",
 					"repeatable":true
+				},
+				{
+					"key": "child-field-for-parent-id",
+					"name": "<b>Child Field for Parent ID</b><br>If this field (from the child project) is specified, then the parent ID will be entered.",
+					"required": false,
+					"type": "text"
+				},
+				{
+					"key": "parent-field-for-child-id",
+					"name": "<b>Parent Field for Child ID</b><br>If this field (from the parent project) is specified, then the child ID will be entered.",
+					"required": false,
+					"type": "text"
+				},
+				{
+					"key": "child-id-prefix",
+					"name": "If this field is specified, then the child ID will be prefixed.",
+					"required": false,
+					"type": "text"
+				},
+				{
+					"key": "child-id-delimiter",
+					"name": "If this field is specified, then suffix and prefix will be delimited with the character.",
+					"required": false,
+					"type": "text"
+				},
+				{
+					"key": "child-id-padding",
+					"name": "If this field is specified, then the unique ID of the child ID will be padded with zeros to this number of characters. For example, a padding of 4 will result in an id:STAN-0004",
+					"required": false,
+					"type": "text"
+				},
+				{
+					"key": "child-field-clobber",
+					"name": "If this field is checked, then if there is existing data in the child project for that field, the data will be clobbered.",
+					"required": false,
+					"type": "checkbox"
+				},
+				{
+					"key": "migration-timestamp",
+					"name": "<b>Migration Timestamp in Parent Project</b><br>Upon completion of migration, timestamp will be entered in this field.",
+					"required": false,
+					"type": "text"
 				}
 			]
 		}
