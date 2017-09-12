@@ -60,6 +60,12 @@
 			"repeatable":true,
 			"sub_settings":[
 				{
+					"key": "trigger-form",
+					"name": "<b>Triggering Form</b><br>Only clone if this form is saved. If left blank, any save in the project will trigger a clone.",
+					"required": false,
+					"type": "form-list"
+				},
+				{
 					"key": "mirror-logic",
 					"name": "Only clone if this logical expression is true (leave blank for always clone)",
 					"required": false,
@@ -132,6 +138,12 @@
 				{
 					"key": "migration-timestamp",
 					"name": "<b>Migration Timestamp in Parent Project</b><br>Upon completion of migration, timestamp will be entered in this field.",
+					"required": false,
+					"type": "text"
+				},
+				{
+					"key": "migration-notes",
+					"name": "<b>Migration NOTES in Parent Project</b><br>Upon completion of migration, notes will be entered in this field.",
 					"required": false,
 					"type": "text"
 				}
