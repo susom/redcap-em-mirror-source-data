@@ -8,8 +8,12 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
 
     private $config_fields = array();
-    private $proj;
+
     private $project_id;
+    private $record_id;
+    private $instrument;
+    private $event_id;
+    private $redcap_event_name;  //only set if longitudinal
 
     /**
      * MirrorMasterDataModule constructor.
@@ -65,14 +69,13 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
     {
         //get record_id
         $pk_field = \REDCap::getRecordIdField();
-        $record_id = isset($_REQUEST[$pk_field]) ? $_REQUEST[$pk_field] : "";
-        $page = isset($_REQUEST['page']) ? $_REQUEST['page'] : "";
+        $record_id = $this->record_id;
+        $page = $this->instrument;
 
-        \Plugin::log("PAGE IS " . $page);
         //0. CHECK if in the right instrument
         $trigger_form = $config['trigger-form'];
         if ((!empty($trigger_form)) && ($trigger_form != $page)) {
-            return;
+            return false;
         }
 
         //1. CHECK if migration has already been completed
@@ -86,18 +89,14 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         //check if timestamp and child_id are set (both? just one?)
         //if exists, then don't do anything since already migrated
         $migration_timestamp = $newData[$config['migration-timestamp']];
-        \Plugin::log($migration_timestamp, "DEBUG", "MIGRATION_TIMESTAMP");
 
         //get  child pid and get data
         $child_pid = $config['child-project-id'];
-        \Plugin::log($child_pid, "DEBUG", 'Child pid is $child_pid and parent pid is ' . $this->project_id);
 
         if (!empty($migration_timestamp) ) { //|| (isset($migration_timestamp))) {
-            //TODO: add to logging?
+            //xTODO: add to logging?
             \Plugin::log("No data migration:  already completed for record " . $record_id . " to child project " . $child_pid);
-            return;
-        } else {
-            \Plugin::log("NO TIMESTAMP -- KEEP GOING");
+            return false;
         }
 
         //2. CHECK IF LOGIC IS TRIGGERED
@@ -109,12 +108,30 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         }
 
         //3. INTERSECT DATA:  Get fields present in screening project that are also present in the main project
-        ////todo: clean child_pid/ db_escape or intval
-        /// redcap: prep
-        /// test_script of scripts an dtest out the clean methods...
-        ///
-        $sql = "select field_name from redcap_metadata a where a.project_id = " . $child_pid .
-            " and field_name in (select b.field_name from redcap_metadata b where b.project_id = " . $this->project_id . ");";
+        //3A. Restrict fields to specified forms?
+        //todo: UI for config should have dropdown for child forms (only available for current project (parent))
+        $include_from_child_form = $config['include-only-form-child'];
+        $include_from_parent_form = $config['include-only-form-parent'];
+
+        // sanitize sql inputs : db_escape or intval
+        // redcap: prep is deprecated and now use db_escape (which calls db_real_escape_string)
+        // see tests at /plugins/test/sql_sanitize_test.php
+        $clean_str_child = db_escape($include_from_child_form);
+        $clean_str_parent = db_escape($include_from_parent_form);
+        $clean_child_pid = intval($child_pid);
+        $clean_parent_pid = intval($this->project_id); //not necessary
+
+        //if either child or parent comes up empty, return and log to user cause of error
+        if (empty($clean_child_pid) || empty($clean_parent_pid)) {
+            \Plugin::log("Either child and parent pids was missing.". $clean_child_pid . "a and " . $clean_parent_pid);
+            \Plugin::log("Either child and parent pids was missing.". empty($clean_child_pid) . "a and " . empty($clean_parent_pid));
+            return;
+        }
+        $sql_child_form = ((empty($clean_str_child)) ? "" : " and a.form_name = '$clean_str_child'");
+        $sql_parent_form = ((empty($clean_str_parent)) ? "" : " and b.form_name = '$clean_str_parent'");
+
+        $sql = "select field_name from redcap_metadata a where a.project_id = " . $child_pid . $sql_child_form .
+            " and field_name in (select b.field_name from redcap_metadata b where b.project_id = " . $clean_parent_pid .$sql_parent_form .  ");";
         $q = db_query($sql);
         \Plugin::log($sql, "DEBUG", "SQL");
 
@@ -127,10 +144,6 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         //include-only-fields
         $include_only = $config['include-only-fields'];
 
-        \Plugin::log($exclude, "DEBUG", 'EXCLUDE THESE arr_fields:' .empty($exclude));
-        \Plugin::log(empty($exclude), "DEBUG", 'EMPTY THESE arr_fields:' .empty($exclude));
-        \Plugin::log(isset($exclude), "DEBUG", 'ISSET THESE arr_fields:' .empty($exclude));
-        \Plugin::log(count($exclude), "DEBUG", 'COUNT THESE arr_fields:' .empty($exclude));
         //if (!empty($exclude)) {
         if (count($exclude) >1) {
             $arr_fields = array_diff($arr_fields, $exclude);
@@ -142,12 +155,13 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         }
 
         if (empty($arr_fields)) {
-            //TODO: Where should this data to users be bubbled up? notes field? logging?
-            \Plugin::log("There were no intersect fields between the parent (" . $this->project_id .
-                ") and child projects (" . $child_pid . ").");
+            //Log msg in Notes field
+            $msg = "There were no intersect fields between the parent (" . $this->project_id .
+                ") and child projects (" . $child_pid . ").";
+            \Plugin::log($msg);
+            $this->updateNoteInParent($record_id, $pk_field, $config, $msg);
             return;
         }
-
 
         //4. RETRIEVE INTERSECT DATA FROM PARENT
 
@@ -158,7 +172,6 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         $newData = current($results);
 
         \Plugin::log($newData, "DEBUG", "INTERSECT DATA");
-
 
         //5. SET UP CHILD PROJECT TO SAVE DATA
         //GET admin variables from child project
@@ -191,24 +204,40 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
 //        \Plugin::log($result, "DEBUG", "Creating new record: ".reset($next_id));
         // Check for upload errors
+        $parent_data = array();
         if (!empty($result['errors'])) {
-            $msg = "Error creating record in CHILD project ".$child_pid." - ask administrator to review logs: " . ($result['errors']);
+            $msg = "Error creating record in CHILD project ".$child_pid." - ask administrator to review logs: " . print_r(($result['errors']));
 
             \Plugin::log($msg);
             \Plugin::log($result, "DEBUG", "CHILD ERROR");
         } else {
             $msg = "Successfully migrated.";
-            $parent_fields[] = $config['migration-timestamp'];
-            $parent_fields[] = $config['parent-field-for-child-id'];
             $parent_data[$config['parent-field-for-child-id']] = reset($next_id);
             $parent_data[$config['migration-timestamp']] = date('Y-m-d H:i:s');
         }
 
         //7. UPDATE PARENT
+        $this->updateNoteInParent($record_id, $pk_field, $config, $msg, $parent_data);
+
+        return true;
+    }
+
+    /**
+     * Bubble up status to user via the timestamp and notes field in the parent form
+     * in config file as 'migration-notes'
+     * @param $record_id : record_id of current record
+     * @param $pk_field : the first field in parent project (primary key)
+     * @param $config : config fields for migration module
+     * @param $msg : Message to enter into Notes field
+     * @param $parent_data : If child migration successful, data about migration to child (else leave as null)
+     * @return bool : return fail/pass status of save data
+     */
+    public function updateNoteInParent($record_id, $pk_field, $config, $msg, $parent_data = array()) {
         $parent_data[$pk_field] = $record_id;
         $parent_data[$config['migration-notes']] = $msg;
 
-        if (!empty($master_event_name)) {
+        \Plugin::log(empty($config['master-event-name']),"config master-event-name empty? ".($config['master-event-name']));
+        if (!empty($config['master-event-name'])) {
             $parent_data['redcap-event-name'] = $config['master-event-name'];
         }
 
@@ -223,15 +252,15 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         if (!empty($result['errors'])) {
             $msg = "Error creating record in Parent project ".$this->project_id. " - ask administrator to review logs: " . json_encode($result);
             //$sr->updateFinalReviewNotes($msg);
-            //todo: bubble up to user
+            //todo: bubble up to user : should this be sent to logging?
             \Plugin::log($msg);
             \Plugin::log("RESULT OF PARENT: " .print_r($result, true));
+            //logEvent($description, $changes_made="", $sql="", $record=null, $event_id=null, $project_id=null);
+            \REDCap::logEvent("Mirror Master Data Module", $msg, NULL, $record_id, $config['master-event-name']);
             return false;
         }
 
-        return true;
     }
-
     /**
      * @param $logic
      * @param $record
@@ -328,8 +357,14 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
     function hook_save_record($project_id, $record = NULL, $instrument, $event_id, $group_id = NULL, $survey_hash = NULL, $response_id = NULL, $repeat_instance = 1)
     {
-        $this->Proj = new \Project($this->project_id);
-        $this->project_id = $this->Proj->project_id;
+
+        $this->project_id = $project_id;
+        $this->record_id = $record;
+        $this->instrument = $instrument;
+        $this->event_id = $event_id;
+        $this->redcap_event_name = \REDCap::getEventNames(false, false, $event_id);
+
+//        \Plugin::log("PROJECTID: ".$project_id . "RECORD: " . $record . " EVENT_ID: ". $event_id . " INSTRUMENT: " . $instrument . "REDCAP_EVENT_NAME " . $this->redcap_event_name);
 
 //        \Plugin::log($this->Proj->project_id, "DEBUG", "PROJECT ID");
         //\Plugin::log($this->Proj, "DEBUG", "proj");
@@ -344,8 +379,10 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
     }
 }
 
-
-    function redcap_connect() {
+/**
+ * Snipped from Luke Steven's code
+ */
+function redcap_connect() {
         // can just do require '../../redcap_connect.php (or some appropriate relative path)
         // the code here looks for redcap_connect.php up successive parent directories
         $dir = dirname(__FILE__);
@@ -356,6 +393,6 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             require_once $dir.'/redcap_connect.php';
             return;
         }
-        exit;
-    }
+    exit;
+}
 

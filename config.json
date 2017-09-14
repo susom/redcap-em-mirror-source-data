@@ -54,7 +54,7 @@
 		},
 		{
 			"key": "child-projects",
-			"name": "List of Child Projects to receieve Mirrored Data",
+			"name": "List of Child Projects to receive Mirrored Data",
 			"required": true,
 			"type": "sub_settings",
 			"repeatable":true,
@@ -67,19 +67,19 @@
 				},
 				{
 					"key": "mirror-logic",
-					"name": "Only clone if this logical expression is true (leave blank for always clone)",
+					"name": "<b>Trigger logic in Parent</b><br>Only clone if this logical expression is true (leave blank for always clone)",
 					"required": false,
 					"type": "text"
 				},
 				{
 					"key": "child-project-id",
-					"name": "Child Project",
+					"name": "<b>Child Project</b>",
 					"required": true,
 					"type": "project-id"
 				},
 				{
 					"key": "child-event-name",
-					"name": "Child Event Name (or blank if classical)",
+					"name": "<b>Child Event Name</b> (or blank if classical)",
 					"required": false,
 					"type": "custom",
 					"source": "js/config.js",
@@ -87,17 +87,29 @@
 				},
 				{
 					"key": "exclude-fields",
-					"name": "Comma-separated list of fields to exclude from copying to child project(s)",
+					"name": "<b>Excluded fields</b><br> List of fields to exclude from copying to child project(s)",
 					"required": false,
 					"type": "field-list",
 					"repeatable":true
 				},
 				{
 					"key": "include-only-fields",
-					"name": "Comma-separated list of fields to include - if specified ONLY these fields will be copied to the child project(s)",
+					"name": "<b>Include only fields</b><br> List of fields to include - if specified ONLY these fields will be copied to the child project(s)",
 					"required": false,
 					"type": "field-list",
 					"repeatable":true
+				},
+				{
+					"key": "include-only-form-child",
+					"name": "<b>Include only fields from this CHILD form</b><br>Intersection of fields from child and parent will only include child fields from this form. If left blank, it will include all child fields that intersect with parent fields.",
+					"required": false,
+					"type": "text"
+				},
+				{
+					"key": "include-only-form-parent",
+					"name": "<b>Include only fields from this PARENT form</b><br>Intersection of fields from child and parent will only include parent fields from this form. If left blank, it will include all parent fields that intersect with child fields.",
+					"required": false,
+					"type": "form-list"
 				},
 				{
 					"key": "child-field-for-parent-id",
@@ -113,25 +125,25 @@
 				},
 				{
 					"key": "child-id-prefix",
-					"name": "If this field is specified, then the child ID will be prefixed.",
+					"name": "<b>Child ID prefix</b><br>If this field is specified, then the child ID will be prefixed.",
 					"required": false,
 					"type": "text"
 				},
 				{
 					"key": "child-id-delimiter",
-					"name": "If this field is specified, then suffix and prefix will be delimited with the character.",
+					"name": "<b>Child ID delimiter</b><br>If this field is specified, then suffix and prefix will be delimited with the character.",
 					"required": false,
 					"type": "text"
 				},
 				{
 					"key": "child-id-padding",
-					"name": "If this field is specified, then the unique ID of the child ID will be padded with zeros to this number of characters. For example, a padding of 4 will result in an id:STAN-0004",
+					"name": "<b>Child ID padding</b><br>If this field is specified, then the unique ID of the child ID will be padded with zeros to this number of characters. For example, a padding of 4 will result in an id:STAN-0004",
 					"required": false,
 					"type": "text"
 				},
 				{
 					"key": "child-field-clobber",
-					"name": "If this field is checked, then if there is existing data in the child project for that field, the data will be clobbered.",
+					"name": "<b>Clobber existing data</b><br>If this field is checked, then if there is existing data in the child project for that field, the data will be clobbered.",
 					"required": false,
 					"type": "checkbox"
 				},
