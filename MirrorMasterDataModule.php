@@ -133,7 +133,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         $sql = "select field_name from redcap_metadata a where a.project_id = " . $child_pid . $sql_child_form .
             " and field_name in (select b.field_name from redcap_metadata b where b.project_id = " . $clean_parent_pid .$sql_parent_form .  ");";
         $q = db_query($sql);
-        \Plugin::log($sql, "DEBUG", "SQL");
+//        \Plugin::log($sql, "DEBUG", "SQL");
 
         $arr_fields = array();
         while ($row = db_fetch_assoc($q)) $arr_fields[] = $row['field_name'];
@@ -236,7 +236,6 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         $parent_data[$pk_field] = $record_id;
         $parent_data[$config['migration-notes']] = $msg;
 
-        \Plugin::log(empty($config['master-event-name']),"config master-event-name empty? ".($config['master-event-name']));
         if (!empty($config['master-event-name'])) {
             $parent_data['redcap-event-name'] = $config['master-event-name'];
         }
@@ -268,20 +267,14 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      */
     public function testLogic($logic, $record) {
 
-        \Plugin::log('Testing record '. $record . ' with ' . $logic, "DEBUG");
+//      \Plugin::log('Testing record '. $record . ' with ' . $logic, "DEBUG");
         //if blank logic, then return true;
-        \Plugin::log($logic, "DEBUG", 'logic');
-        \Plugin::log(empty($logic), "DEBUG", 'EMPTY  logic');
-        \Plugin::log(isset($logic), "DEBUG", 'ISSET  logic');
-        \Plugin::log(count($logic), "DEBUG", 'COUNT  logic');
-        \Plugin::log(($logic==''), "DEBUG", 'IS LOGIC = blank');
-
         if (empty($logic)) {
             \Plugin::log("EMPTY SO RETURNING TRUE: ". empty($logic));
             return true;
         }
 
-        \Plugin::log('EVENT FOR  '. $record . ' is ' . $this->redcap_event_name, "DEBUG");
+//        \Plugin::log('EVENT FOR  '. $record . ' is ' . $this->redcap_event_name, "DEBUG");
         if (\LogicTester::isValid($logic)) {
 
             // Append current event details
@@ -362,7 +355,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         $this->record_id = $record;
         $this->instrument = $instrument;
         $this->event_id = $event_id;
-        $this->redcap_event_name = \REDCap::getEventNames(false, false, $event_id);
+        $this->redcap_event_name = \REDCap::getEventNames(true, false, $event_id);
 
 //        \Plugin::log("PROJECTID: ".$project_id . "RECORD: " . $record . " EVENT_ID: ". $event_id . " INSTRUMENT: " . $instrument . "REDCAP_EVENT_NAME " . $this->redcap_event_name);
 
