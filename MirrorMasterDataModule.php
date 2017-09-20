@@ -15,25 +15,6 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
     private $event_id;
     private $redcap_event_name;  //only set if longitudinal
 
-    /**
-     * MirrorMasterDataModule constructor.
-     *
-     * Parse through config file and store fields and values
-
-    public function __construct()
-    {
-        parent::__construct();
-
-    $this->Proj = new \Project($this->project_id);
-    $this->project_id = $this->Proj->project_id;
-
-    //        \Plugin::log($this->Proj->project_id, "DEBUG", "PROJECT ID");
-    //\Plugin::log($this->Proj, "DEBUG", "proj");
-    $this->config_fields = $this->setupConfig();
-
-
-    }
-     */
 
     /**
      * Rearrange the config settings to be by child project
