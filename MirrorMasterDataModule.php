@@ -94,27 +94,19 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         $include_from_child_form = $config['include-only-form-child'];
         $include_from_parent_form = $config['include-only-form-parent'];
 
-        // sanitize sql inputs : db_escape or intval
         // redcap: prep is deprecated and now use db_escape (which calls db_real_escape_string)
-        // see tests at /plugins/test/sql_sanitize_test.php
-        $clean_str_child = db_escape($include_from_child_form);
-        $clean_str_parent = db_escape($include_from_parent_form);
-        $clean_child_pid = intval($child_pid);
-        $clean_parent_pid = intval($this->project_id); //not necessary
-
         //if either child or parent comes up empty, return and log to user cause of error
-        if (empty($clean_child_pid) || empty($clean_parent_pid)) {
-            \Plugin::log("Either child and parent pids was missing.". $clean_child_pid . "a and " . $clean_parent_pid);
-            \Plugin::log("Either child and parent pids was missing.". empty($clean_child_pid) . "a and " . empty($clean_parent_pid));
+        if (empty(intval($child_pid)) || empty($this->project_id)) {
+            \Plugin::log("Either child and parent pids was missing.". intval($child_pid) . "a and " . $this->project_id);
             return;
         }
-        $sql_child_form = ((empty($clean_str_child)) ? "" : " and a.form_name = '$clean_str_child'");
-        $sql_parent_form = ((empty($clean_str_parent)) ? "" : " and b.form_name = '$clean_str_parent'");
+        $sql_child_form = ((empty(db_escape($include_from_child_form))) ? "" : " and a.form_name = '".db_escape($include_from_child_form)."'");
+        $sql_parent_form = ((empty(db_escape($include_from_parent_form))) ? "" : " and b.form_name = '".db_escape($include_from_parent_form)."'");
 
-        $sql = "select field_name from redcap_metadata a where a.project_id = " . $child_pid . $sql_child_form .
-            " and field_name in (select b.field_name from redcap_metadata b where b.project_id = " . $clean_parent_pid .$sql_parent_form .  ");";
+        $sql = "select field_name from redcap_metadata a where a.project_id = " . intval($child_pid) . $sql_child_form .
+            " and field_name in (select b.field_name from redcap_metadata b where b.project_id = " . $this->project_id .$sql_parent_form .  ");";
         $q = db_query($sql);
-//        \Plugin::log($sql, "DEBUG", "SQL");
+        \Plugin::log($sql, "DEBUG", "SQL");
 
         $arr_fields = array();
         while ($row = db_fetch_assoc($q)) $arr_fields[] = $row['field_name'];
