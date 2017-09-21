@@ -111,7 +111,6 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         $sql = "select field_name from redcap_metadata a where a.project_id = " . intval($child_pid) . $sql_child_form .
             " and field_name in (select b.field_name from redcap_metadata b where b.project_id = " . $this->project_id .$sql_parent_form .  ");";
         $q = db_query($sql);
-        //\Plugin::log($sql, "DEBUG", "SQL");
 
         $arr_fields = array();
         while ($row = db_fetch_assoc($q)) $arr_fields[] = $row['field_name'];
