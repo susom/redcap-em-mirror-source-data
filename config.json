@@ -6,7 +6,7 @@
 	"description": "Module migrates the intersect of fields found in parent and child project",
 
 	"versions": [
-		{ "0.1": "Initial Development Version" }
+		{ "0.1 ": "Initial Development Version" }
 	],
 
 	"authors": [
