@@ -1,7 +1,7 @@
 <?php
 namespace Stanford\MirrorMasterDataModule;
 
-redcap_connect();
+include "../../redcap_connect.php";
 
 class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 {
@@ -15,25 +15,6 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
     private $event_id;
     private $redcap_event_name;  //only set if longitudinal
 
-    /**
-     * MirrorMasterDataModule constructor.
-     *
-     * Parse through config file and store fields and values
-
-    public function __construct()
-    {
-        parent::__construct();
-
-    $this->Proj = new \Project($this->project_id);
-    $this->project_id = $this->Proj->project_id;
-
-    //        \Plugin::log($this->Proj->project_id, "DEBUG", "PROJECT ID");
-    //\Plugin::log($this->Proj, "DEBUG", "proj");
-    $this->config_fields = $this->setupConfig();
-
-
-    }
-     */
 
     /**
      * Rearrange the config settings to be by child project
@@ -65,6 +46,11 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
     }
 
+    /**
+     * Migrate data for child project specified in $config parameter
+     * @param $config
+     * @return bool
+     */
     function handleChildProject($config)
     {
         //get record_id
@@ -113,31 +99,22 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         $include_from_child_form = $config['include-only-form-child'];
         $include_from_parent_form = $config['include-only-form-parent'];
 
-        // sanitize sql inputs : db_escape or intval
         // redcap: prep is deprecated and now use db_escape (which calls db_real_escape_string)
-        // see tests at /plugins/test/sql_sanitize_test.php
-        $clean_str_child = db_escape($include_from_child_form);
-        $clean_str_parent = db_escape($include_from_parent_form);
-        $clean_child_pid = intval($child_pid);
-        $clean_parent_pid = intval($this->project_id); //not necessary
-
         //if either child or parent comes up empty, return and log to user cause of error
-        if (empty($clean_child_pid) || empty($clean_parent_pid)) {
-            \Plugin::log("Either child and parent pids was missing.". $clean_child_pid . "a and " . $clean_parent_pid);
-            \Plugin::log("Either child and parent pids was missing.". empty($clean_child_pid) . "a and " . empty($clean_parent_pid));
+        if (empty(intval($child_pid)) || empty($this->project_id)) {
+            \Plugin::log("Either child and parent pids was missing.". intval($child_pid) . "a and " . $this->project_id);
             return;
         }
-        $sql_child_form = ((empty($clean_str_child)) ? "" : " and a.form_name = '$clean_str_child'");
-        $sql_parent_form = ((empty($clean_str_parent)) ? "" : " and b.form_name = '$clean_str_parent'");
+        $sql_child_form = ((empty(db_escape($include_from_child_form))) ? "" : " and a.form_name = '".db_escape($include_from_child_form)."'");
+        $sql_parent_form = ((empty(db_escape($include_from_parent_form))) ? "" : " and b.form_name = '".db_escape($include_from_parent_form)."'");
 
-        $sql = "select field_name from redcap_metadata a where a.project_id = " . $child_pid . $sql_child_form .
-            " and field_name in (select b.field_name from redcap_metadata b where b.project_id = " . $clean_parent_pid .$sql_parent_form .  ");";
+        $sql = "select field_name from redcap_metadata a where a.project_id = " . intval($child_pid) . $sql_child_form .
+            " and field_name in (select b.field_name from redcap_metadata b where b.project_id = " . $this->project_id .$sql_parent_form .  ");";
         $q = db_query($sql);
-//        \Plugin::log($sql, "DEBUG", "SQL");
+        //\Plugin::log($sql, "DEBUG", "SQL");
 
         $arr_fields = array();
         while ($row = db_fetch_assoc($q)) $arr_fields[] = $row['field_name'];
-//        \Plugin::log($arr_fields, "DEBUG" , "ARR_FIELDS");
 
         //exclude-fields
         $exclude = $config['exclude-fields'];
@@ -200,9 +177,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             'json',
             json_encode(array($newData)),
             (($child_field_clobber=='1') ? 'overwrite' : 'normal'));
-//        \Plugin::log($child_field_clobber, "DEBUG", "TERNARY: ".(($child_field_clobber) ? 'overwrite' : 'normal'));
 
-//        \Plugin::log($result, "DEBUG", "Creating new record: ".reset($next_id));
         // Check for upload errors
         $parent_data = array();
         if (!empty($result['errors'])) {
@@ -246,7 +221,6 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             json_encode(array($parent_data)),
             'overwrite');
 
-//        \Plugin::log($result, "DEBUG", "updated parent record: ".$record_id);
         // Check for upload errors
         if (!empty($result['errors'])) {
             $msg = "Error creating record in Parent project ".$this->project_id. " - ask administrator to review logs: " . json_encode($result);
@@ -270,7 +244,6 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 //      \Plugin::log('Testing record '. $record . ' with ' . $logic, "DEBUG");
         //if blank logic, then return true;
         if (empty($logic)) {
-            \Plugin::log("EMPTY SO RETURNING TRUE: ". empty($logic));
             return true;
         }
 
@@ -285,10 +258,8 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
             if (\LogicTester::evaluateLogicSingleRecord($logic, $record)) {
                 $result = true;
-                \Plugin::log($result, "DEBUG", "VALIDATED TO TRUE");
             } else {
                 $result = false;
-                \Plugin::log($result, "DEBUG", "LOGIC VALIDATED to FALSE");
                 return false;
             }
         } else {
@@ -300,11 +271,12 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
 
     /**
-     * For example
+     * For example, following parameters should yield next id in form : 2151-0001
      * $target_project_pid = STUDY_PID
      * $prefix = "2151"
      * $delilimiter = "-"
      * $padding = 4
+     *
      */
     function getNextID($target_project_pid, $prefix='', $delimiter = '', $padding = 0) {
         //need to find pk in target_project_pid
@@ -327,15 +299,13 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             $last_id = key($all_ids);
         }
 
-//        \Plugin::log($last_id, "DEBUG", "this is the last id found for project ".$target_project_id);
-
         $re = '/'.$prefix.$delimiter.'(?\'candidate\'\d*)/';
         preg_match_all($re, $last_id, $matches, PREG_SET_ORDER, 0);
         $candidate = $matches[0]['candidate'];
         //\Plugin::log($matches,"DEBUG","matches with candidate: ".$candidate);
 
         $incremented = intval($candidate) + 1;
-        \Plugin::log($incremented,"DEBUG", "this is incremented");
+
         if (($padding > 0) && ($padding > strlen((string)$incremented))) {
             $padded = str_pad($incremented, $padding, '0', STR_PAD_LEFT);
         } else {
@@ -348,6 +318,18 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         return array($pk=>$next_id);
     }
 
+    /**
+     * Hook method which gets called at save
+     *
+     * @param $project_id
+     * @param null $record
+     * @param $instrument
+     * @param $event_id
+     * @param null $group_id
+     * @param null $survey_hash
+     * @param null $response_id
+     * @param int $repeat_instance
+     */
     function hook_save_record($project_id, $record = NULL, $instrument, $event_id, $group_id = NULL, $survey_hash = NULL, $response_id = NULL, $repeat_instance = 1)
     {
 
@@ -358,9 +340,6 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         $this->redcap_event_name = \REDCap::getEventNames(true, false, $event_id);
 
 //        \Plugin::log("PROJECTID: ".$project_id . "RECORD: " . $record . " EVENT_ID: ". $event_id . " INSTRUMENT: " . $instrument . "REDCAP_EVENT_NAME " . $this->redcap_event_name);
-
-//        \Plugin::log($this->Proj->project_id, "DEBUG", "PROJECT ID");
-        //\Plugin::log($this->Proj, "DEBUG", "proj");
         $this->config_fields = $this->setupConfig();
 
         //iterate over each of the child records
@@ -370,22 +349,5 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
         }
     }
-}
-
-/**
- * Snipped from Luke Steven's code
- */
-function redcap_connect() {
-        // can just do require '../../redcap_connect.php (or some appropriate relative path)
-        // the code here looks for redcap_connect.php up successive parent directories
-        $dir = dirname(__FILE__);
-        while (!file_exists($dir.'/redcap_connect.php') && strlen($dir) > 3) {
-            $dir = dirname($dir);
-        }
-        if (file_exists($dir.'/redcap_connect.php')) {
-            require_once $dir.'/redcap_connect.php';
-            return;
-        }
-    exit;
 }
 
