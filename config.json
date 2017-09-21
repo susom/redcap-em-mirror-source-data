@@ -81,9 +81,7 @@
 					"key": "child-event-name",
 					"name": "<b>Child Event Name</b> (or blank if classical)",
 					"required": false,
-					"type": "custom",
-					"source": "js/config.js",
-					"functionName": "ExternalModulesOptional.getChildEvent"
+					"type": "text"
 				},
 				{
 					"key": "exclude-fields",
