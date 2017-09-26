@@ -60,6 +60,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
         //0. CHECK if in the right instrument
         $trigger_form = $config['trigger-form'];
+        \Plugin::log($trigger_form, "DEBUG", "matches " . $page);
         if ((!empty($trigger_form)) && ($trigger_form != $page)) {
             return false;
         }
@@ -111,9 +112,12 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         $sql = "select field_name from redcap_metadata a where a.project_id = " . intval($child_pid) . $sql_child_form .
             " and field_name in (select b.field_name from redcap_metadata b where b.project_id = " . $this->project_id .$sql_parent_form .  ");";
         $q = db_query($sql);
+        \Plugin::log($sql, "DEBUG", "SQL");
 
         $arr_fields = array();
         while ($row = db_fetch_assoc($q)) $arr_fields[] = $row['field_name'];
+
+        \Plugin::log($arr_fields, "DEBUG", "INTERSECTION");
 
         //exclude-fields
         $exclude = $config['exclude-fields'];
@@ -206,7 +210,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      * @param $parent_data : If child migration successful, data about migration to child (else leave as null)
      * @return bool : return fail/pass status of save data
      */
-    public function updateNoteInParent($record_id, $pk_field, $config, $msg, $parent_data = array()) {
+    function updateNoteInParent($record_id, $pk_field, $config, $msg, $parent_data = array()) {
         $parent_data[$pk_field] = $record_id;
         $parent_data[$config['migration-notes']] = $msg;
 
@@ -220,6 +224,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             json_encode(array($parent_data)),
             'overwrite');
 
+        \Plugin::log($parent_data, "DEBUG", "RESULT");
         // Check for upload errors
         if (!empty($result['errors'])) {
             $msg = "Error creating record in Parent project ".$this->project_id. " - ask administrator to review logs: " . json_encode($result);
@@ -238,7 +243,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      * @param $record
      * @return bool|string
      */
-    public function testLogic($logic, $record) {
+    function testLogic($logic, $record) {
 
 //      \Plugin::log('Testing record '. $record . ' with ' . $logic, "DEBUG");
         //if blank logic, then return true;
