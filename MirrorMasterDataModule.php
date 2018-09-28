@@ -308,7 +308,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         $sql = "select field_name from redcap_metadata a where a.project_id = " . intval($child_pid) . $sql_child_form .
             " and field_name in (select b.field_name from redcap_metadata b where b.project_id = " . $parent_pid .$sql_parent_form .  ");";
         $q = db_query($sql);
-        $this->emDebug($sql, "SQL");
+        //$this->emDebug($sql);
 
         $arr_fields = array();
         while ($row = db_fetch_assoc($q)) $arr_fields[] = $row['field_name'];
@@ -347,7 +347,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         if (!empty($config['master-event-name'])) {
             //assuming that current event is the right event
             $master_event = $this->redcap_event_name; // \REDCap::getEventNames(true, false, $config['master-event-name']);
-            $this->emLog("Event name from REDCap::getEventNames : $master_event / EVENT name from this->redcap_event_name: ".$this->redcap_event_name);
+            //$this->emLog("Event name from REDCap::getEventNames : $master_event / EVENT name from this->redcap_event_name: ".$this->redcap_event_name);
 
             $parent_data['redcap_event_name'] = $master_event; //$config['master-event-name'];
         }
