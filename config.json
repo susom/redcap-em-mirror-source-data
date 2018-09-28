@@ -220,7 +220,7 @@
 				},
 				{
 					"key": "parent-field-for-child-id",
-					"name": "<b>LOGGING IN PARENT: Child ID</b><br>If specified, then the child ID will be logged here.<br><br><b>REMOVE STALE If this field is populated, this ID will be used in the migration attempt.</b> Use this field if you need to specify your child ID, rather than have one created.<br>The value entered for <b>Clobber existing data</b> (see below) will determine whether migration will overwrite existing data.",
+					"name": "<b>LOGGING IN PARENT: Child ID</b><br>If specified, then the child ID will be logged here.",
 					"required": false,
 					"type": "field-list"
 				},
