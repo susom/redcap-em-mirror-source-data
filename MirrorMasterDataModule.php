@@ -347,16 +347,18 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         if (!empty($config['master-event-name'])) {
             //assuming that current event is the right event
             $master_event = \REDCap::getEventNames(true, false, $config['master-event-name']);
+            $this->emLog("Event name from REDCap::getEventNames : $master_event / EVENT name from this->redcap_event_name".$this->redcap_event_name);
+
             $parent_data['redcap_event_name'] = $master_event; //$config['master-event-name'];
         }
 
+        $this->emLog($parent_data, "Saving Parent Data");
         $result = \REDCap::saveData(
             $this->project_id,
             'json',
             json_encode(array($parent_data)),
             'overwrite');
 
-        //$this->emLog($parent_data, "DEBUG", "RESULT");
         // Check for upload errors
         if (!empty($result['errors'])) {
             $msg = "Error creating record in PARENT project ".$this->project_id. " - ask administrator to review logs: " . json_encode($result);
