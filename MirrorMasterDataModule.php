@@ -352,7 +352,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             $parent_data['redcap_event_name'] = $master_event; //$config['master-event-name'];
         }
 
-        $this->emLog($parent_data, "Saving Parent Data");
+        //$this->emLog($parent_data, "Saving Parent Data");
         $result = \REDCap::saveData(
             $this->project_id,
             'json',
