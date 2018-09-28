@@ -26,10 +26,13 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
     {
         //get the config defintion
         $config = $this->getConfig();
+        //$this->emLog($config, "==========this is the config ");
 
         //get the sub-settings
-        $config_fields = $config['project-settings']['2']['sub_settings'];
-        //$this->emLog($config_fields, "==========this is the config json file");
+        $config_fields = $config['project-settings']['1']['sub_settings'];
+        if (empty($config_fields)) {
+            $this->emError($config_fields, "==========EMPTY config json file");
+        }
 
         //iterate through the config fields and pull up all the keys
         //arrange them so that each field is under each project
@@ -57,13 +60,22 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         $pk_field = \REDCap::getRecordIdField();
         $record_id = $this->record_id;
         $page = $this->instrument;
+        $event_id = $this->event_id;
+        $event_name = $this->redcap_event_name;
+
+        //0. CHECK if in right EVENT
+        $trigger_event = $config['master-event-name'];
+        //$this->emLog("Trigger event is $trigger_event EVENT ID is  $event_id and EVNET NAME is $event_name");
+        if ((!empty($trigger_event)) && ($trigger_event != $event_id)) {
+            return false;
+        }
 
         //0. CHECK if in the right instrument
         $trigger_form = $config['trigger-form'];
         if ((!empty($trigger_form)) && ($trigger_form != $page)) {
             return false;
         }
-        //$this->emDebug("Found trigger form ". $trigger_form);
+        //$this->emLog("Found trigger form ". $trigger_form);
 
         //1. CHECK if migration has already been completed
         $parent_fields[] = $config['parent-field-for-child-id'];
@@ -333,7 +345,9 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         }
 
         if (!empty($config['master-event-name'])) {
-            $parent_data['redcap-event-name'] = $config['master-event-name'];
+            //assuming that current event is the right event
+            $master_event = \REDCap::getEventNames(true, false, $config['master-event-name']);
+            $parent_data['redcap_event_name'] = $master_event; //$config['master-event-name'];
         }
 
         $result = \REDCap::saveData(
@@ -476,7 +490,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
         //iterate over each of the child records
         foreach ($this->config_fields as $key => $value) {
-            $this->emLog("PROJECTID: ".$project_id ." : Dealing with child: $key");
+            //$this->emLog("PROJECTID: ".$project_id ." : Dealing with child: $key");
             $this->handleChildProject($value);
         }
     }

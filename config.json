@@ -45,19 +45,12 @@
 			"type": "checkbox"
 		}
 	],
-
 	"project-settings": [
 		{
 			"key": "enable-project-debug-logging",
 			"name": "<b>Enable Debug Logging</b>",
 			"required": false,
 			"type": "checkbox"
-		},
-		{
-			"key": "master-event-name",
-			"name": "If longitudinal, enter the source event name",
-			"required": false,
-			"type": "event-list"
 		},
 		{
 			"key": "child-projects",
@@ -71,6 +64,12 @@
 					"name": "<b>SELECT TRIGGERING FORM</b><br>Only clone if this form is saved. If left blank, any save in the project will trigger a clone.",
 					"required": false,
 					"type": "form-list"
+				},
+				{
+					"key": "master-event-name",
+					"name": "If longitudinal, enter the source event name.<br>Make sure to enter the corresponding TARGET event name below.",
+					"required": false,
+					"type": "event-list"
 				},
 				{
 					"key": "mirror-logic",
