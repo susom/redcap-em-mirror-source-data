@@ -346,8 +346,8 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
         if (!empty($config['master-event-name'])) {
             //assuming that current event is the right event
-            $master_event = \REDCap::getEventNames(true, false, $config['master-event-name']);
-            $this->emLog("Event name from REDCap::getEventNames : $master_event / EVENT name from this->redcap_event_name".$this->redcap_event_name);
+            $master_event = $this->redcap_event_name; // \REDCap::getEventNames(true, false, $config['master-event-name']);
+            $this->emLog("Event name from REDCap::getEventNames : $master_event / EVENT name from this->redcap_event_name: ".$this->redcap_event_name);
 
             $parent_data['redcap_event_name'] = $master_event; //$config['master-event-name'];
         }
