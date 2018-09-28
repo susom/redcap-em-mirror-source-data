@@ -68,27 +68,51 @@
 			"sub_settings":[
 				{
 					"key": "trigger-form",
-					"name": "<b>Triggering Form</b><br>Only clone if this form is saved. If left blank, any save in the project will trigger a clone.",
+					"name": "<b>SELECT TRIGGERING FORM</b><br>Only clone if this form is saved. If left blank, any save in the project will trigger a clone.",
 					"required": false,
 					"type": "form-list"
 				},
 				{
 					"key": "mirror-logic",
-					"name": "<b>Trigger logic in Parent</b><br>Only clone if this logical expression is true (leave blank for always clone)",
+					"name": "<b>SPECIFY TRIGGERING LOGIC</b><br>Only clone if this logical expression is true (leave blank for always clone)",
 					"required": false,
 					"type": "text"
 				},
 				{
 					"key": "child-project-id",
-					"name": "<b>Child Project</b>",
+					"name": "<b>SELECT TARGET PROJECT</b>",
 					"required": true,
 					"type": "project-id"
 				},
 				{
 					"key": "child-event-name",
-					"name": "<b>Child Event Name</b> (or blank if classical)",
+					"name": "<b>SPECIFY EVENT NAME OF TARGET FORM</b><br>Leave blank if classical",
 					"required": false,
 					"type": "text"
+				},
+				{
+					"key": "fields-to-migrate",
+					"name": "<b>SELECT FIELDS TO MIGRATE</b><br>Fields in both parent and target have to match (fieldname has to exist in both projects.)<br>Select the inclusion criteria.",
+					"required": true,
+					"type": "dropdown",
+					"choices":[
+						{
+							"name" : "Migrate all intersection of fieldnames (with optional exclusions)",
+							"value" : "migrate-intersect"
+						},
+						{
+							"name" : "Migrate these specified fieldnames only (of intersect of fieldnames)",
+							"value" : "migrate-intersect-specified"
+						},
+						{
+							"name" : "Migrate only specified TARGET form",
+							"value" : "migrate-child-form"
+						},
+						{
+							"name" : "Migrate only specified PARENT form",
+							"value" : "migrate-parent-form"
+						}
+					]
 				},
 				{
 					"key": "exclude-fields",
@@ -102,65 +126,113 @@
 					"name": "<b>Include only fields</b><br> List of fields to include - if specified ONLY these fields will be copied to the child project(s)",
 					"required": false,
 					"type": "field-list",
-					"repeatable":true
+					"repeatable":true,
+					"branchingLogic": {
+						"field": "fields-to-migrate",
+						"value": "migrate-intersect-specified"
+					}
 				},
 				{
 					"key": "include-only-form-child",
-					"name": "<b>Include only fields from this CHILD form</b><br>Intersection of fields from child and parent will only include child fields from this form. If left blank, it will include all child fields that intersect with parent fields.",
+					"name": "<b>Migrate only fields from this CHILD form</b><br>Intersection of fields from child and parent will only include child fields from this form.",
 					"required": false,
-					"type": "text"
+					"type": "text",
+					"repeatable":false,
+					"branchingLogic": {
+						"field": "fields-to-migrate",
+						"value": "migrate-child-form"
+					}
 				},
 				{
 					"key": "include-only-form-parent",
-					"name": "<b>Include only fields from this PARENT form</b><br>Intersection of fields from child and parent will only include parent fields from this form. If left blank, it will include all parent fields that intersect with child fields.",
+					"name": "<b>Migrate only fields from this PARENT form</b><br>Intersection of fields from child and parent will only include parent fields from this form. ",
 					"required": false,
-					"type": "form-list"
+					"type": "form-list",
+					"repeatable":false,
+					"branchingLogic": {
+						"field": "fields-to-migrate",
+						"value": "migrate-parent-form"
+					}
+				},
+
+
+				{
+					"key": "child-field-clobber",
+					"name": "<b>REDO MIGRATION / CLOBBER EXISTING DATA</b><br>If this is checked, then the migration will be repeated. <br><br>This can result in multiple records being created if new ID creation is set or existing data in the target project to be overwritten if TARGET ID is reused.",
+					"required": false,
+					"type": "checkbox"
+				},
+				{
+					"key": "child-id-select",
+					"name": "<b>SELECT HOW TARGET ID SHOULD BE CREATED: </b><br>State of <b>Clobber existing data</b> will determine whether migration will overwrite existing data.",
+					"required": true,
+					"type": "dropdown",
+					"choices":[
+						{
+							"name" : "Use same ID as PARENT",
+							"value" : "child-id-like-parent"
+						},
+						{
+							"name" : "Use value entered in PARENT field",
+							"value" : "child-id-parent-specified"
+						},
+						{
+							"name" : "Create a new ID in TARGET project",
+							"value" : "child-id-create-new"
+						}
+					]
+				},
+				{
+					"key": "child-id-parent-specified-field",
+					"name": "<b>CHILD ID Version 2: ID to be used specified in parent</b><br>If this field is populated, this ID will be used in the migration attempt.</b> Use this field if you need to specify your child ID, rather than have one created.<br>If there is no entry, then there will not be a migration.<br>The value entered for <b>Clobber existing data</b> will determine whether migration will overwrite existing data.",
+					"required": false,
+					"type": "field-list",
+					"branchingLogic": {
+						"field": "child-id-select",
+						"value": "child-id-parent-specified"
+					}
+				},
+				{
+					"key": "child-id-prefix",
+					"name": "<b>CHILD ID Version 3.a: Create new ID: <br>prefix</b><br>If this field is specified, then the child ID will be prefixed.",
+					"required": false,
+					"type": "text",
+					"branchingLogic": {
+						"field": "child-id-select",
+						"value": "child-id-create-new"
+					}
+				},
+				{
+					"key": "child-id-padding",
+					"name": "<b>CHILD ID Version 3.c: Create new ID: <br>padding</b><br>If this field is specified, then the unique ID of the child ID will be padded with zeros to this number of characters. For example, a padding of 4 will result in an id:STAN-0004",
+					"required": false,
+					"type": "text",
+					"branchingLogic": {
+						"field": "child-id-select",
+						"value": "child-id-create-new"
+					}
 				},
 				{
 					"key": "child-field-for-parent-id",
-					"name": "<b>Child Field for Parent ID</b><br>If this field (in the CHILD project) is specified, then the parent ID will be entered.",
+					"name": "<b>LOGGING IN TARGET: Parent ID</b><br>If specified, then the parent ID will be logged here.",
 					"required": false,
 					"type": "text"
 				},
 				{
 					"key": "parent-field-for-child-id",
-					"name": "<b>Parent Field for Child ID</b><br>If this field (in the PARENT project) is specified, then the child ID will be entered.<br><b>If this field is populated, this ID will be used in the migration attempt.</b> Use this field if you need to specify your child ID, rather than have one created.<br>The value entered for <b>Clobber existing data</b> (see below) will determine whether migration will overwrite existing data.",
+					"name": "<b>LOGGING IN PARENT: Child ID</b><br>If specified, then the child ID will be logged here.<br><br><b>REMOVE STALE If this field is populated, this ID will be used in the migration attempt.</b> Use this field if you need to specify your child ID, rather than have one created.<br>The value entered for <b>Clobber existing data</b> (see below) will determine whether migration will overwrite existing data.",
 					"required": false,
 					"type": "field-list"
 				},
 				{
-					"key": "child-field-clobber",
-					"name": "<b>Clobber existing data</b><br>If this field is checked, then if there is existing data in the child project for that field, the data will be clobbered.",
-					"required": false,
-					"type": "checkbox"
-				},
-				{
-					"key": "child-id-prefix",
-					"name": "<b>Child ID prefix</b><br>If this field is specified, then the child ID will be prefixed.",
-					"required": false,
-					"type": "text"
-				},
-				{
-					"key": "child-id-delimiter",
-					"name": "<b>Child ID delimiter</b><br>If this field is specified, then suffix and prefix will be delimited with the character.",
-					"required": false,
-					"type": "text"
-				},
-				{
-					"key": "child-id-padding",
-					"name": "<b>Child ID padding</b><br>If this field is specified, then the unique ID of the child ID will be padded with zeros to this number of characters. For example, a padding of 4 will result in an id:STAN-0004",
-					"required": false,
-					"type": "text"
-				},
-				{
 					"key": "migration-timestamp",
-					"name": "<b>Migration Timestamp in Parent Project</b><br>Upon completion of migration, timestamp will be entered in this field.<br><u>An existing entry here will prevent repeat migration.</u>",
+					"name": "<b>LOGGING IN PARENT: Migration Timestamp in Parent Project</b><br>Upon completion of migration, timestamp will be logged in this field.<br><u>An existing entry here will prevent repeat migration unless <b>Clobber existing data</b> is checked.</u>",
 					"required": true,
 					"type": "field-list"
 				},
 				{
 					"key": "migration-notes",
-					"name": "<b>Migration NOTES in Parent Project</b><br>Upon completion of migration, notes will be entered in this field.",
+					"name": "<b>LOGGING IN PARENT: Migration NOTES in Parent Project</b><br>Upon completion of migration, notes will be logged in this field.",
 					"required": false,
 					"type": "field-list"
 				}

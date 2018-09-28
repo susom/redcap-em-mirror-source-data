@@ -8,6 +8,9 @@ An external module to mirror data from a master project into 1 or more children 
 
 Mirror Master Data Module will migrate the values of a subset of fields found in both the parent (instigating) project and the child (receiving) project.
 
+Mirror Master module has to be installed in the parent project.
 Setting up the Mirror Master Data Module
 
 (1) In the left hand menu, click the External Modules link
+
+![Example Table](assets/example_table.png)

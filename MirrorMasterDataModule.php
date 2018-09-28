@@ -68,6 +68,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         //1. CHECK if migration has already been completed
         $parent_fields[] = $config['parent-field-for-child-id'];
         $parent_fields[] = $config['migration-timestamp'];
+        $child_field_clobber = $config['child-field-clobber'];
 
         $results = \REDCap::getData('json', $record_id, $parent_fields);
         $results = json_decode($results, true);
@@ -81,67 +82,54 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         //get  child pid and get data
         $child_pid = $config['child-project-id'];
 
-        if (!empty($migration_timestamp) ) { //|| (isset($migration_timestamp))) {
+        //migration_timestamp already has a value and Child_field_clobber is not set
+        if (!empty($migration_timestamp && ($child_field_clobber!='1')) ) { //|| (isset($migration_timestamp))) {
             //xTODO: add to logging?
-            $this->emLog("No data migration:  already completed for record " . $record_id . " to child project " . $child_pid);
+            $existing_msg = "No data migration: Clobber not turned on and migration already completed for record "
+                . $record_id . " to child project " . $child_pid;
+            $this->emLog($existing_msg);
+
+            //reset the migration timestamp and child_id
+            $log_data = array();
+            $log_data[$config['parent-field-for-child-id']] = '';
+            $log_data[$config['migration-timestamp']] = date('Y-m-d H:i:s');
+
+            //UPDATE PARENT LOG
+            $this->updateNoteInParent($record_id, $pk_field, $config, $existing_msg, $log_data);
+
             return false;
         }
+        $this->emLog("Doing data migration: Clobber: ".$child_field_clobber. " and ".
+            " Migration timestamp:  ".$migration_timestamp . "  record: "
+            . $record_id . " to child project " . $child_pid);
 
         //2. CHECK IF LOGIC IS TRIGGERED
         $mirror_logic = $config['mirror-logic'];
         // validation
         if (! $this->testLogic($mirror_logic, $record_id)) {
-            $this->emLog($logic, "DEBUG", "LOGIC validated to false so skipping");
-            return;
+            $this->emLog($mirror_logic, "DEBUG", "LOGIC validated to false so skipping");
+            return false;
         }
 
-        //3. INTERSECT DATA:  Get fields present in screening project that are also present in the main project
+        //3. INTERSECT FIELDS:  Get fields present in screening project that are also present in the main project
         //3A. Restrict fields to specified forms?
         //todo: UI for config should have dropdown for child forms (only available for current project (parent))
-        $include_from_child_form = $config['include-only-form-child'];
-        $include_from_parent_form = $config['include-only-form-parent'];
 
-        // redcap: prep is deprecated and now use db_escape (which calls db_real_escape_string)
-        //if either child or parent comes up empty, return and log to user cause of error
-        if (empty(intval($child_pid)) || empty($this->project_id)) {
-            $this->emLog("Either child and parent pids was missing.". intval($child_pid) . " and " . $this->project_id);
-            return;
-        }
-        $sql_child_form = ((empty(db_escape($include_from_child_form))) ? "" : " and a.form_name = '".db_escape($include_from_child_form)."'");
-        $sql_parent_form = ((empty(db_escape($include_from_parent_form))) ? "" : " and b.form_name = '".db_escape($include_from_parent_form)."'");
+        $arr_fields = $this->getIntersectFields($child_pid, $this->project_id, $config['fields-to-migrate'],  $config['include-only-form-child'],
+            $config['include-only-form-parent'], $config['exclude-fields'],$config['include-only-fields']);
+        //$this->emDebug($arr_fields, "INTERSECTION is of count ".count($arr_fields));
 
-        $sql = "select field_name from redcap_metadata a where a.project_id = " . intval($child_pid) . $sql_child_form .
-            " and field_name in (select b.field_name from redcap_metadata b where b.project_id = " . $this->project_id .$sql_parent_form .  ");";
-        $q = db_query($sql);
-        //$this->emLog($sql, "DEBUG", "SQL");
-
-        $arr_fields = array();
-        while ($row = db_fetch_assoc($q)) $arr_fields[] = $row['field_name'];
-
-        //$this->emLog($arr_fields, "INTERSECTION");
-
-        //exclude-fields
-        $exclude = $config['exclude-fields'];
-        //include-only-fields
-        $include_only = $config['include-only-fields'];
-
-        //if (!empty($exclude)) {
-        if (count($exclude) >1) {
-            $arr_fields = array_diff($arr_fields, $exclude);
-//            $this->emLog($arr_fields, "DEBUG",'EXCLUDED arr_fields:');
-        } else if (count($include_only) > 1) {
-            //giving precedence to exclude / include if both are entered
-            $arr_fields = array_intersect($arr_fields, $include_only);
-            //$this->emLog($arr_fields, "DEBUG",'INCLUDED FIELDS arr_fields:');
-        }
-
-        if (empty($arr_fields)) {
+        if (count($arr_fields)<1) {
             //Log msg in Notes field
             $msg = "There were no intersect fields between the parent (" . $this->project_id .
                 ") and child projects (" . $child_pid . ").";
             //$this->emLog($msg);
-            $this->updateNoteInParent($record_id, $pk_field, $config, $msg);
-            return;
+            //reset the migration timestamp and child_id
+            $log_data = array();
+            $log_data[$config['parent-field-for-child-id']] = '';
+            $log_data[$config['migration-timestamp']] = date('Y-m-d H:i:s');
+            $this->updateNoteInParent($record_id, $pk_field, $config, $msg, $log_data);
+            return false;
         }
 
         //4. RETRIEVE INTERSECT DATA FROM PARENT
@@ -152,75 +140,76 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         $results = json_decode($results, true);
         $newData = current($results);
 
-        //$this->emLog($newData, "DEBUG", "INTERSECT DATA");
+        //$this->emDebug($newData, "INTERSECT DATA");
 
-        //5. SET UP CHILD PROJECT TO SAVE DATA
-        //GET admin variables from child project
-        $child_field_for_parent_id = $config['child-field-for-parent-id'];
-        $child_event_name = $config['child-event-name'];
-        $child_field_clobber = $config['child-field-clobber'];
-        $child_id_prefix = $config['child-id-prefix'];
-        $child_id_delimiter = $config['child-id-delimiter'];
-        $child_id_padding = $config['child-id-padding'];
-
+        //get primary key for TARGET project
+        $child_pk = self::getPrimaryKey($child_pid);
 
         //5.5 Determine the ID in the CHILD project.
-        //If the parent-field-for-child-id (in PARENT PROJECT) is already populated, then that means a migration has
-        //already occurred or they want to use a predetermined child id. REUSE that ID, otherwise create new ID
-        //Assuming that the overwrite parameter will handle not clobbering existing data and will only supplement new ones.
-        $child_pk = self::getPrimaryKey($child_pid);
-        $this->emLog($child_pk, "DEBUG", "CHILD PID");
+        $child_id = $this->getNextIDInTarget($record_id, $config, $child_pid);
 
-        if (isset($config['parent-field-for-child-id']) AND (!empty($parent_field_for_child_id))) {
-            $child_id = $parent_field_for_child_id;
-            $this->emLog($child_id, "DEBUG", "CHILD ID ALREADY EXISTS, RE-USE EXISTING CHILD ID: ".$child_pk);
+        //5.6 check if this child id already exists?  IF yes, check clobber. maybe not necesssary, since overwrite will handle it.
+        // actually go ahead and do it to handle cases where they only want one initial creation.
+        //todo: this event name is only for TARGET form.  not for logging variable
+        $child_event_name = $config['child-event-name'];
 
+        $results = \REDCap::getData($child_pid, 'json', $child_id, null, $config['child-event-name']);
+        $results = json_decode($results, true);
+        $target_results = current($results);
+
+        //$this->emDebug(empty($target_results),$target_results, "TARGET DATA for child id $child_id in pid $child_pid with event $child_event_name");
+
+        if ( (count($target_results) > 0)  && ($child_field_clobber!='1'))  {
+            //Log no migration
+            $msg = "Error creating record in TARGET project. ";
+            $msg .= "Target ID, $child_id, already exists (". count($target_results). ")  in $child_pid and clobber is set to false ($child_field_clobber).";
+            $this->emDebug($msg);
         } else {
-            //get next id from child project
-            $next_id = $this->getNextID($child_pid, $child_id_prefix, $child_id_delimiter, $child_id_padding);
+            //$this->emDebug("PROCEED: Target $child_id does not exists (" . count($target_results) . ") in $child_pid or clobber true ($child_field_clobber).");
 
-            $child_id = $next_id[$child_pk];
-            //$this->emLog($next_id, "DEBUG", "NEW MIGRATION: CREATE NEW NEXTID:  ".$child_id);
-        }
+            //5. SET UP CHILD PROJECT TO SAVE DATA
+            //TODO: logging variable needs to be done separately because of events
+            //GET logging variables from target project
+            $child_field_for_parent_id = $config['child-field-for-parent-id'];
 
 
-
-        //add additional fields to be added to the SaveData call
-        //set the new ID
-        $newData[$child_pk] = $child_id;
-        if (!empty($child_event_name)) {
-            $newData['redcap_event_name'] = ($child_event_name);
-        }
-
-        //enter field for child-field-for-parent-id
-        if (!empty($child_field_for_parent_id)) {
-            $newData[$child_field_for_parent_id] = $record_id;
-        }
-
-        //$this->emLog($newData, "DEBUG", "SAVING THIS TO CHILD DATA");
-
-        //6. UPDATE CHILD: Upload the data to child project
-        $result = \REDCap::saveData(
-            $child_pid,
-            'json',
-            json_encode(array($newData)),
-            (($child_field_clobber=='1') ? 'overwrite' : 'normal'));
-
-        // Check for upload errors
-        $parent_data = array();
-
-        if (!empty($result['errors'])) {
-            $msg = "Error creating record in CHILD project ".$child_pid." - ask administrator to review logs: " . print_r($result['errors'],true);
-
-            $this->emError($msg);
-            $this->emError($result, "DEBUG", "CHILD ERROR");
-        } else {
-            $msg = "Successfully migrated.";
-            if (isset($config['parent-field-for-child-id'])) {
-                $parent_data[$config['parent-field-for-child-id']] = $child_id;
+            //add additional fields to be added to the SaveData call
+            //set the new ID
+            $newData[$child_pk] = $child_id;
+            if (!empty($child_event_name)) {
+                $newData['redcap_event_name'] = ($child_event_name);
             }
-            if (isset($config['migration-timestamp'])) {
-                $parent_data[$config['migration-timestamp']] = date('Y-m-d H:i:s');
+
+            //enter logging field for child-field-for-parent-id
+            if (!empty($child_field_for_parent_id)) {
+                $newData[$child_field_for_parent_id] = $this->record_id;
+            }
+
+            //$this->emLog($newData, "SAVING THIS TO CHILD DATA");
+
+            //6. UPDATE CHILD: Upload the data to child project
+            $result = \REDCap::saveData(
+                $child_pid,
+                'json',
+                json_encode(array($newData)),
+                (($child_field_clobber == '1') ? 'overwrite' : 'normal'));
+
+            // Check for upload errors
+            $parent_data = array();
+
+            if (!empty($result['errors'])) {
+                $msg = "Error creating record in CHILD project " . $child_pid . " - ask administrator to review logs: " . print_r($result['errors'], true);
+
+                $this->emError($msg);
+                $this->emError($result, "DEBUG", "CHILD ERROR");
+            } else {
+                $msg = "Successfully migrated.";
+                if (isset($config['parent-field-for-child-id'])) {
+                    $parent_data[$config['parent-field-for-child-id']] = $child_id;
+                }
+                if (isset($config['migration-timestamp'])) {
+                    $parent_data[$config['migration-timestamp']] = date('Y-m-d H:i:s');
+                }
             }
         }
 
@@ -229,6 +218,101 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         $this->updateNoteInParent($record_id, $pk_field, $config, $msg, $parent_data);
 
         return true;
+    }
+
+    function getNextIDInTarget($record_id, $config, $child_pid) {
+        $child_id = null;
+        $child_id_select = $config['child-id-select'];
+        //get primary key for TARGET project
+        $child_pk = self::getPrimaryKey($child_pid);
+
+        switch ($child_id_select) {
+            case 'child-id-like-parent':
+                $child_id = $this->record_id;
+                //$this->emDebug($child_id,  "CHILD ID: USING PARENT ID: ".$child_id);
+                break;
+            case 'child-id-parent-specified':
+                $child_id_parent_specified_field = $config['child-id-parent-specified-field'];
+
+                //get data from parent for the value in this field
+                $results = \REDCap::getData('json', $record_id, $child_id_parent_specified_field, $config['master-event-name']);
+                $results = json_decode($results, true);
+                $existing_target_data = current($results);
+
+                $child_id = $existing_target_data[$child_id_parent_specified_field];
+                //$this->emDebug($existing_target_data,$child_id_parent_specified_field, $child_id,  "PARENT SPECIFIED CHILD ID: ".$child_id);
+                break;
+            case 'child-id-create-new':
+                $child_id_prefix = $config['child-id-prefix'];
+                $child_id_delimiter = $config['child-id-delimiter'];
+                $child_id_padding = $config['child-id-padding'];
+
+                //get next id from child project
+                $next_id = $this->getNextID($child_pid, $child_id_prefix, $child_id_delimiter, $child_id_padding);
+
+                $child_id = $next_id[$child_pk];
+                break;
+            default:
+                $next_id = $this->getNextID($child_pid, null, null, null);
+                $child_id = $next_id[$child_pk];
+        }
+        return $child_id;
+    }
+
+    function getIntersectFields($child_pid, $parent_pid, $fields_to_migrate, $include_from_child_form, $include_from_parent_form,
+                                $exclude, $include_only) {
+
+        //branching logic reset does not clear out old values - force clear here
+        switch ($fields_to_migrate) {
+            case 'migrate-intersect':
+                $include_from_child_form = null;
+                $include_from_parent_form = null;
+                $include_only = null;
+                break;
+            case 'migrate-intersect-specified':
+                $include_from_child_form = null;
+                $include_from_parent_form = null;
+                break;
+            case 'migrate-child-form':
+                $include_from_parent_form = null;
+                $include_only = null;
+                break;
+            case 'migrate-parent-form':
+                $include_from_child_form = null;
+                $include_only = null;
+                break;
+        }
+        // redcap: prep is deprecated and now use db_escape (which calls db_real_escape_string)
+        //if either child or parent comes up empty, return and log to user cause of error
+        if (empty(intval($child_pid)) || empty($parent_pid)) {
+            $this->emError("Either child and parent pids was missing.". intval($child_pid) . " and " . $parent_pid);
+            return false;
+        }
+
+        //todo: ADD support for multiple child forms and multiple parent forms
+        $sql_child_form = ((empty(db_escape($include_from_child_form))) ? "" : " and a.form_name = '".db_escape($include_from_child_form)."'");
+        $sql_parent_form = ((empty(db_escape($include_from_parent_form))) ? "" : " and b.form_name = '".db_escape($include_from_parent_form)."'");
+
+        $sql = "select field_name from redcap_metadata a where a.project_id = " . intval($child_pid) . $sql_child_form .
+            " and field_name in (select b.field_name from redcap_metadata b where b.project_id = " . $parent_pid .$sql_parent_form .  ");";
+        $q = db_query($sql);
+        $this->emDebug($sql, "SQL");
+
+        $arr_fields = array();
+        while ($row = db_fetch_assoc($q)) $arr_fields[] = $row['field_name'];
+
+        //if (!empty($exclude)) {
+        if (count($exclude) >1) {
+            $arr_fields = array_diff($arr_fields, $exclude);
+            //$this->emDebug($arr_fields, 'EXCLUDED arr_fields:');
+        } else if (count($include_only) > 1) {
+            //giving precedence to exclude / include if both are entered
+            $arr_fields = array_intersect($arr_fields, $include_only);
+            //$this->emDebug($include_only, $arr_fields, 'INCLUDED FIELDS arr_fields:');
+        }
+
+        return $arr_fields;
+
     }
 
     /**
