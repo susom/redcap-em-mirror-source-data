@@ -171,10 +171,10 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
         //$this->emDebug(empty($target_results),$target_results, "TARGET DATA for child id $child_id in pid $child_pid with event $child_event_name");
 
-        if ( (count($target_results) > 0)  && ($child_field_clobber!='1'))  {
+        if ( (!empty($target_results))  && ($child_field_clobber!='1'))  {
             //Log no migration
             $msg = "Error creating record in TARGET project. ";
-            $msg .= "Target ID, $child_id, already exists (". count($target_results). ")  in $child_pid and clobber is set to false ($child_field_clobber).";
+            $msg .= "Target ID, $child_id, already exists (count = ". count($target_results). ")  in $child_pid and clobber is set to false ($child_field_clobber).";
             $this->emDebug($msg);
         } else {
             //$this->emDebug("PROCEED: Target $child_id does not exists (" . count($target_results) . ") in $child_pid or clobber true ($child_field_clobber).");
@@ -256,11 +256,11 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                 break;
             case 'child-id-create-new':
                 $child_id_prefix = $config['child-id-prefix'];
-                $child_id_delimiter = $config['child-id-delimiter'];
                 $child_id_padding = $config['child-id-padding'];
 
                 //get next id from child project
-                $next_id = $this->getNextID($child_pid, $child_id_prefix, $child_id_delimiter, $child_id_padding);
+                $next_id = $this->getNextID($child_pid, $child_id_prefix, $child_id_padding);
+
 
                 $child_id = $next_id[$child_pk];
                 break;
@@ -426,7 +426,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      * $padding = 4
      *
      */
-    function getNextID($target_project_pid, $prefix='', $delimiter = '', $padding = 0) {
+    function getNextID($target_project_pid, $prefix='', $padding = 0) {
         //need to find pk in target_project_pid
         $target_dict = \REDCap::getDataDictionary($target_project_pid,'array');
 
@@ -439,7 +439,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
         //if empty then last_id is 0
         if (empty($all_ids)) {
-            $last_id = $prefix.$delimiter.'0';
+            $last_id = $prefix.'0';
             $this->emLog($last_id, "DEBUG","there is no existing, set last to ".$last_id);
         } else {
             ksort($all_ids);
@@ -460,7 +460,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             $padded = $incremented;
         }
 
-        $next_id = $prefix.$delimiter.$padded;
+        $next_id = $prefix.$padded;
 
         //return key and value
         return array($pk=>$next_id);
