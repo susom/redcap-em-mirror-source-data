@@ -265,7 +265,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                 $child_id = $next_id[$child_pk];
                 break;
             default:
-                $next_id = $this->getNextID($child_pid, null, null, null);
+                $next_id = $this->getNextID($child_pid, null, null);
                 $child_id = $next_id[$child_pk];
         }
         return $child_id;
