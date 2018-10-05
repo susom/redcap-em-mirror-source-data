@@ -266,7 +266,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             default:
                 $event_id = self::getEventIdFromName($child_pid, $config['child-event-name']);
                 $next_id = $this->getNextID($child_pid, $event_id);
-                $child_id = $next_id[$child_pk];
+                $child_id = $next_id;
         }
         return $child_id;
     }
