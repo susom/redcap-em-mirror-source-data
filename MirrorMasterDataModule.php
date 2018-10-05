@@ -258,14 +258,14 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                 $child_id_prefix = $config['child-id-prefix'];
                 $child_id_padding = $config['child-id-padding'];
 
+                $event_id = self::getEventIdFromName($child_pid, $config['child-event-name']);
                 //get next id from child project
-                $next_id = $this->getNextID($child_pid, $child_id_prefix, $child_id_padding);
-
-
-                $child_id = $next_id[$child_pk];
+                $next_id = $this->getNextID($child_pid,$event_id, $child_id_prefix, $child_id_padding);
+                $child_id = $next_id;
                 break;
             default:
-                $next_id = $this->getNextID($child_pid, null, null, null);
+                $event_id = self::getEventIdFromName($child_pid, $config['child-event-name']);
+                $next_id = $this->getNextID($child_pid, $event_id);
                 $child_id = $next_id[$child_pk];
         }
         return $child_id;
@@ -419,51 +419,68 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
     }
 
     /**
-     * For example, following parameters should yield next id in form : 2151-0001
-     * $target_project_pid = STUDY_PID
-     * $prefix = "2151"
-     * $delilimiter = "-"
-     * $padding = 4
-     *
+     * @param $pid
+     * @param $event_id  Pass NULL or '' if CLASSICAL
+     * @param string $prefix
+     * @param bool $padding
+     * @return bool|int|string
      */
-    function getNextID($target_project_pid, $prefix='', $padding = 0) {
-        //need to find pk in target_project_pid
-        $target_dict = \REDCap::getDataDictionary($target_project_pid,'array');
+    public function getNextId($pid, $event_id, $prefix = '', $padding = false) {
 
-        reset($target_dict);
-        $pk = key($target_dict);
-//        $this->emLog($pk, "DEBUG", "target pk");
+        $thisProj = new \Project($pid);
+        $id_field = $thisProj->table_pk;
 
-        // Determine next record in child project
-        $all_ids = \REDCap::getData($target_project_pid, 'array', NULL, $pk);
-
-        //if empty then last_id is 0
-        if (empty($all_ids)) {
-            $last_id = $prefix.'0';
-            $this->emLog($last_id, "DEBUG","there is no existing, set last to ".$last_id);
-        } else {
-            ksort($all_ids);
-            end($all_ids);
-            $last_id = key($all_ids);
+        //If Classical no event or null is passed
+        if (($event_id == '') OR ($event_id ==null)) {
+            $event_id = $this->getFirstEventId($pid);
         }
 
-        $re = '/'.$prefix.$delimiter.'(?\'candidate\'\d*)/';
-        preg_match_all($re, $last_id, $matches, PREG_SET_ORDER, 0);
-        $candidate = $matches[0]['candidate'];
-        //$this->emLog($matches,"DEBUG","matches with candidate: ".$candidate);
+        //$this->emLog("PK for $pid is $id_field looking for event: ".$event_id . " in pid: " .$pid);
 
-        $incremented = intval($candidate) + 1;
+        $q = \REDCap::getData($pid,'array',NULL,array($id_field), $event_id);
+        //$this->emLog($q, "Found records in project $pid using $id_field");
 
-        if (($padding > 0) && ($padding > strlen((string)$incremented))) {
-            $padded = str_pad($incremented, $padding, '0', STR_PAD_LEFT);
-        } else {
-            $padded = $incremented;
-        }
+        $i = 1;
+        do {
+            // Make a padded number
+            if ($padding) {
+                // make sure we haven't exceeded padding, pad of 2 means
+                $max = 10^$padding;
+                if ($i >= $max) {
+                    $this->emLog("Error - $i exceeds max of $max permitted by padding of $padding characters");
+                    return false;
+                }
+                $id = str_pad($i, $padding, "0", STR_PAD_LEFT);
+                //$this->emLog("Padded to $padding for $i is $id");
+            } else {
+                $id = $i;
+            }
 
-        $next_id = $prefix.$padded;
+            // Add the prefix
+            $id = $prefix . $id;
+            //$this->emLog("Prefixed id for $i is $id");
 
-        //return key and value
-        return array($pk=>$next_id);
+            $i++;
+        } while (!empty($q[$id][$event_id][$id_field]));
+
+        $this->emLog("Next ID in project $pid for field $id_field is $id");
+        return $id;
+    }
+
+    /**
+     * Returns the event id given a project id and event name
+     * This was needed because the existing plugin function only operates in the context of the current project.
+     * @param $project_id
+     * @param $event_name
+     * @return int|null     Returns the event_id or null if not found
+     */
+    public static function getEventIdFromName($project_id, $event_name) {
+        if (empty($event_name)) return NULL;
+        $thisProj = new \Project($project_id,false);
+        $thisProj->loadEventsForms();
+        $event_id_names = $thisProj->getUniqueEventNames();
+        $event_names_id = array_flip($event_id_names);
+        return isset($event_names_id[$event_name]) ? $event_names_id[$event_name] : NULL;
     }
 
     /**
