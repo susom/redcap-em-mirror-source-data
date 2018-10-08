@@ -435,7 +435,8 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             $event_id = $this->getFirstEventId($pid);
         }
 
-        //$this->emLog("PK for $pid is $id_field looking for event: ".$event_id . " in pid: " .$pid);
+        $this->emLog("PK for $pid is $id_field looking for event: ".$event_id . " in pid: " .$pid.
+            " with prefix: $prefix and padding: $padding");
 
         $q = \REDCap::getData($pid,'array',NULL,array($id_field), $event_id);
         //$this->emLog($q, "Found records in project $pid using $id_field");
@@ -504,7 +505,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         $this->event_id = $event_id;
         $this->redcap_event_name = \REDCap::getEventNames(true, false, $event_id);
 
-        //$this->emLog("PROJECTID: ".$project_id . " RECORD: " . $record . " EVENT_ID: ". $event_id . " INSTRUMENT: " . $instrument . " REDCAP_EVENT_NAME " . $this->redcap_event_name);
+        $this->emLog("PROJECTID: ".$project_id . " RECORD: " . $record . " EVENT_ID: ". $event_id . " INSTRUMENT: " . $instrument . " REDCAP_EVENT_NAME " . $this->redcap_event_name);
         $this->config_fields = $this->setupConfig();
 
         //iterate over each of the child records
