@@ -446,7 +446,8 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             // Make a padded number
             if ($padding) {
                 // make sure we haven't exceeded padding, pad of 2 means
-                $max = 10^$padding;
+                //$max = 10^$padding;
+                $max = 10**$padding;
                 if ($i >= $max) {
                     $this->emLog("Error - $i exceeds max of $max permitted by padding of $padding characters");
                     return false;
@@ -459,7 +460,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
             // Add the prefix
             $id = $prefix . $id;
-            //$this->emLog("Prefixed id for $i is $id");
+            //$this->emLog("Prefixed id for $i is $id for event_id $event_id and idfield $id_field");
 
             $i++;
         } while (!empty($q[$id][$event_id][$id_field]));
