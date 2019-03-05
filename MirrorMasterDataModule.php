@@ -26,26 +26,12 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
     {
         //get the config defintion
         $config = $this->getConfig();
-        //$this->emLog($config, "==========this is the config ");
 
-        //get the sub-settings
-        $config_fields = $config['project-settings']['1']['sub_settings'];
-        if (empty($config_fields)) {
-            $this->emError($config_fields, "==========EMPTY config json file");
-        }
+        //Apparently, there is now a getSubSetting method that just gets each subsetting for us
+        $config_fields = $this->getSubSettings('child-projects');
+        //$this->emLog($config_fields, "==========this is the SUBSETTINGS FROM method");
 
-        //iterate through the config fields and pull up all the keys
-        //arrange them so that each field is under each project
-        $keys = array();
-        foreach ($config_fields as $key => $item) {
-            $value = $this->getProjectSetting($item['key']);
-            for ($i = 0; $i < count($value); $i++) {
-                //$this->emLog($value, "$i: $key for ".$item['key']);
-                $keys[$i][$item['key']] = $value[$i];
-            }
-        }
-
-        return $keys;
+        return $config_fields;
 
     }
 
@@ -233,6 +219,8 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
     }
 
     function getNextIDInTarget($record_id, $config, $child_pid) {
+        //$this->emDebug($config);
+
         $child_id = null;
         $child_id_select = $config['child-id-select'];
         //get primary key for TARGET project
@@ -252,7 +240,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                 $existing_target_data = current($results);
 
                 $child_id = $existing_target_data[$child_id_parent_specified_field];
-                //$this->emDebug($existing_target_data,$child_id_parent_specified_field, $child_id,  "PARENT SPECIFIED CHILD ID: ".$child_id);
+                $this->emDebug($existing_target_data,$child_id_parent_specified_field, $child_id,  "PARENT SPECIFIED CHILD ID: ".$child_id);
                 break;
             case 'child-id-create-new':
                 $child_id_prefix = $config['child-id-prefix'];
@@ -509,9 +497,13 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         $this->emLog("PROJECTID: ".$project_id . " RECORD: " . $record . " EVENT_ID: ". $event_id . " INSTRUMENT: " . $instrument . " REDCAP_EVENT_NAME " . $this->redcap_event_name);
         $this->config_fields = $this->setupConfig();
 
+
+        $subsettings = $this->getSubSettings('child-projects');
+
         //iterate over each of the child records
-        foreach ($this->config_fields as $key => $value) {
-            //$this->emLog("PROJECTID: ".$project_id ." : Dealing with child: $key");
+        //foreach ($this->config_fields as $key => $value) {
+        foreach ($subsettings as $key => $value) {
+            //$this->emLog("PROJECTID: ".$project_id ." : Dealing with child: $key", $value);
             $this->handleChildProject($value);
         }
     }

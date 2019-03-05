@@ -173,7 +173,7 @@
 						},
 						{
 							"name" : "Use value entered in PARENT field",
-							"value" : "child-id-parent-specified"
+							"value" :  "child-id-parent-specified"
 						},
 						{
 							"name" : "Create a new ID in TARGET project",
@@ -185,31 +185,19 @@
 					"key": "child-id-parent-specified-field",
 					"name": "<b>CHILD ID Version 2: ID to be used specified in parent</b><br>If this field is populated, this ID will be used in the migration attempt.</b> Use this field if you need to specify your child ID, rather than have one created.<br>If there is no entry, then there will not be a migration.<br>The value entered for <b>Clobber existing data</b> will determine whether migration will overwrite existing data.",
 					"required": false,
-					"type": "field-list",
-					"branchingLogic": {
-						"field": "child-id-select",
-						"value": "child-id-parent-specified"
-					}
+					"type": "field-list"
 				},
 				{
 					"key": "child-id-prefix",
 					"name": "<b>CHILD ID Version 3.a: Create new ID: <br>prefix</b><br>If this field is specified, then the child ID will be prefixed.",
 					"required": false,
-					"type": "text",
-					"branchingLogic": {
-						"field": "child-id-select",
-						"value": "child-id-create-new"
-					}
+					"type": "text"
 				},
 				{
 					"key": "child-id-padding",
 					"name": "<b>CHILD ID Version 3.c: Create new ID: <br>padding</b><br>If this field is specified, then the unique ID of the child ID will be padded with zeros to this number of characters. For example, a padding of 4 will result in an id:STAN-0004",
 					"required": false,
-					"type": "text",
-					"branchingLogic": {
-						"field": "child-id-select",
-						"value": "child-id-create-new"
-					}
+					"type": "text"
 				},
 				{
 					"key": "child-field-for-parent-id",
