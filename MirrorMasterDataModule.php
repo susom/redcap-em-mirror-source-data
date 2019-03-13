@@ -24,13 +24,10 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      */
     function setupConfig()
     {
-        //get the config defintion
-        $config = $this->getConfig();
+        // //get the config definition
+        // $config = $this->getConfig();
 
-        //Apparently, there is now a getSubSetting method that just gets each subsetting for us
         $config_fields = $this->getSubSettings('child-projects');
-        //$this->emLog($config_fields, "==========this is the SUBSETTINGS FROM method");
-
         return $config_fields;
 
     }
@@ -191,6 +188,9 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                 'json',
                 json_encode(array($newData)),
                 (($child_field_clobber == '1') ? 'overwrite' : 'normal'));
+
+
+
 
             // Check for upload errors
             $parent_data = array();
@@ -412,6 +412,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      * @param string $prefix
      * @param bool $padding
      * @return bool|int|string
+     * @throws
      */
     public function getNextId($pid, $event_id, $prefix = '', $padding = false) {
 
@@ -463,6 +464,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      * @param $project_id
      * @param $event_name
      * @return int|null     Returns the event_id or null if not found
+     * @throws
      */
     public static function getEventIdFromName($project_id, $event_name) {
         if (empty($event_name)) return NULL;
@@ -507,6 +509,10 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             $this->handleChildProject($value);
         }
     }
+
+
+
+
 
     /**
      *

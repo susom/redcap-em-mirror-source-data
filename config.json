@@ -37,20 +37,19 @@
 		]
 	},
 
-	"system-settings": [
-		{
-			"key": "enable-system-debug-logging",
-			"name": "<b>Enable Debug Logging (system-wide)</b>",
-			"required": false,
-			"type": "checkbox"
-		}
-	],
+    "system-settings": [
+    	{
+      		"key": "enable-system-debug-logging",
+      		"name": "<b>Enable Debug Logging (system-wide)</b><i>(Requires emLogger)</i>",
+      		"required": false,
+      		"type": "checkbox"
+    	}
+  	],
 	"project-settings": [
 		{
-			"key": "enable-project-debug-logging",
-			"name": "<b>Enable Debug Logging</b>",
-			"required": false,
-			"type": "checkbox"
+			"key": "instructions",
+			"name": "<h5>Instructions</h5><p>This rather complex module copies data from a 'source' project to a 'child' project in response to a logical condition.  The most common use is to take screening data into one or more main study projects after vetting for eligibility and/or consent.",
+			"type": "descriptive"
 		},
 		{
 			"key": "child-projects",
@@ -60,38 +59,48 @@
 			"repeatable":true,
 			"sub_settings":[
 				{
-					"key": "trigger-form",
-					"name": "<b>SELECT TRIGGERING FORM</b><br>Only clone if this form is saved. If left blank, any save in the project will trigger a clone.",
-					"required": false,
-					"type": "form-list"
+					"key": "master-instructions",
+					"name": "<div class='alert alert-primary'>THE FOLLOWING SETTINGS ARE FOR THE MASTER OR SOURCE PROJECT.</div>",
+					"type": "descriptive"
 				},
 				{
 					"key": "master-event-name",
-					"name": "If longitudinal, enter the source event name.<br>Make sure to enter the corresponding TARGET event name below.",
+					"name": "<h6><span class='text-lg badge badge-lg badge-success'>MASTER EVENT</span></h6>If longitudinal, enter the event where source data resides.<br>All data must be in one event",
 					"required": false,
 					"type": "event-list"
 				},
 				{
 					"key": "mirror-logic",
-					"name": "<b>SPECIFY TRIGGERING LOGIC</b><br>Only clone if this logical expression is true (leave blank for always clone)",
+					"name": "<h6><span class='text-lg badge badge-lg badge-success'>TRIGGER LOGIC</span></h6>Only clone from MASTER if this logical expression is true (leave blank to always clone)",
 					"required": false,
-					"type": "text"
+					"type": "textarea"
+				},
+				{
+					"key": "trigger-form",
+					"name": "<h6><span class='text-lg badge badge-lg badge-success'>TRIGGERING FORM</span></h6>The logic above will only be evaluated when this form is saved.  If left blank, logic is applied after all saves (less efficient)",
+					"required": false,
+					"type": "form-list"
+				},
+				{
+					"key": "child-instructions",
+					"name": "<div class='alert alert-danger'>THE FOLLOWING SETTINGS ARE FOR THE CHILD OR DESTINATION PROJECT.</div>",
+					"type": "descriptive"
 				},
 				{
 					"key": "child-project-id",
-					"name": "<b>SELECT TARGET PROJECT</b>",
+					"name": "<h6><span class='text-lg badge badge-lg badge-danger'>SELECT CHILD PROJECT</span></h6>You must have access to the project to select it below",
 					"required": true,
 					"type": "project-id"
 				},
 				{
 					"key": "child-event-name",
-					"name": "<b>SPECIFY EVENT NAME OF TARGET FORM</b><br>Leave blank if classical",
+					"name": "<h6><span class='text-lg badge badge-lg badge-danger'>CHILD EVENT</span></h6>If child project is longitudinal, specific event where data will be placed.<br>Leave blank if child is classical",
 					"required": false,
 					"type": "text"
 				},
 				{
 					"key": "fields-to-migrate",
-					"name": "<b>SELECT FIELDS TO MIGRATE</b><br>Fields in both parent and target have to match (fieldname has to exist in both projects.)<br>Select the inclusion criteria.",
+					"name": "<h6><span class='text-lg badge badge-lg badge-secondary'>SELECT COPY OPTIONS</span></h6>Fields in both parent and target have to match (fieldname has to exist in both projects.)<br>Select the inclusion criteria.",
 					"required": true,
 					"type": "dropdown",
 					"choices":[
@@ -224,6 +233,12 @@
 					"type": "field-list"
 				}
 			]
+		},
+		{
+			"key": "enable-project-debug-logging",
+			"name": "<b>Enable Debug Logging</b>",
+			"required": false,
+			"type": "checkbox"
 		}
 	]
 }
