@@ -1,13 +1,11 @@
 <?php
 namespace Stanford\MirrorMasterDataModule;
 
-include "../../redcap_connect.php";
-
 class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 {
 
 
-    private $config_fields = array();
+    private $subsettings = array();
 
     private $project_id;
     private $record_id;
@@ -16,21 +14,18 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
     private $redcap_event_name;  //only set if longitudinal
 
 
-    /**
-     * Rearrange the config settings to be by child project
-     * and then the config properties -> value
-     *
-     * @return array
-     */
-    function setupConfig()
-    {
-        // //get the config definition
-        // $config = $this->getConfig();
-
-        $config_fields = $this->getSubSettings('child-projects');
-        return $config_fields;
-
-    }
+    // /**
+    //  * Rearrange the config settings to be by child project
+    //  * and then the config properties -> value
+    //  *
+    //  * @return array
+    //  */
+    // function setupConfig()
+    // {
+    //     $config_fields = $this->getSubSettings('child-projects');
+    //     return $config_fields;
+    //
+    // }
 
     /**
      * Migrate data for child project specified in $config parameter
@@ -190,6 +185,35 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                 (($child_field_clobber == '1') ? 'overwrite' : 'normal'));
 
 
+            // IN ORDER TO BE ABLE TO COPY CAT INSTRUMENTS WE ARE GOING TO USE THE UNDERLYING RECORDS SAVE METHOD INSTEAD OF REDCAP METHOD:
+            $args = array(
+                0 => $child_pid,
+                1 => 'json',
+                2 => json_encode(array($newData)),
+                3 => ($child_field_clobber == '1') ? 'overwrite' : 'normal',
+                4 => 'YMD',
+                5 => 'flat',
+                6 => null,
+                7 => true,
+                8 => true,
+                9 => true,
+                10 => false,
+                11 => true,
+                12 => array(),
+                13 => false,
+                14 => false, // CONTINUE WITH UPLOADED FILES
+                15 => false,
+                16 => false,
+                17 => true
+            );
+
+            $result = call_user_func_array(array("Records", "saveData"), $args);
+
+            \Plugin::log("SAVE RESULT", $result);
+
+
+
+
 
 
             // Check for upload errors
@@ -347,6 +371,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             json_encode(array($parent_data)),
             'overwrite');
 
+
         // Check for upload errors
         if (!empty($result['errors'])) {
             $msg = "Error creating record in PARENT project ".$this->project_id. " - ask administrator to review logs: " . json_encode($result);
@@ -497,15 +522,13 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         $this->redcap_event_name = \REDCap::getEventNames(true, false, $event_id);
 
         $this->emLog("PROJECTID: ".$project_id . " RECORD: " . $record . " EVENT_ID: ". $event_id . " INSTRUMENT: " . $instrument . " REDCAP_EVENT_NAME " . $this->redcap_event_name);
-        $this->config_fields = $this->setupConfig();
-
-
         $subsettings = $this->getSubSettings('child-projects');
 
         //iterate over each of the child records
         //foreach ($this->config_fields as $key => $value) {
         foreach ($subsettings as $key => $value) {
             //$this->emLog("PROJECTID: ".$project_id ." : Dealing with child: $key", $value);
+            $this->emDebug("subsettings", $key, $value);
             $this->handleChildProject($value);
         }
     }
@@ -526,7 +549,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
     function emDebug() {
         // Check if debug enabled
-        if ( $this->getSystemSetting('enable-system-debug-logging') || ( !empty($_GET['pid']) && $this->getProjectSetting('enable-project-debug-logging'))) {
+        if ($this->getSystemSetting('enable-system-debug-logging') || ( !empty($_GET['pid']) && $this->getProjectSetting('enable-project-debug-logging'))) {
             $emLogger = \ExternalModules\ExternalModules::getModuleInstance('em_logger');
             $emLogger->emLog($this->PREFIX, func_get_args(), "DEBUG");
         }
