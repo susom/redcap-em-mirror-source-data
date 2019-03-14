@@ -1,12 +1,25 @@
 <?php
 namespace Stanford\MirrorMasterDataModule;
 
+use Project;
+use REDCap;
+use Records;
+
+
 class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 {
 
+    /*
 
-    private $subsettings = array();
+    AM- If you already have a value for the child_id in the parent project and you have clobber on, should you
+    just update or create another child record with a new id?
 
+
+
+     */
+
+
+    // PARENT INFO
     private $project_id;
     private $record_id;
     private $instrument;
@@ -14,18 +27,55 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
     private $redcap_event_name;  //only set if longitudinal
 
 
-    // /**
-    //  * Rearrange the config settings to be by child project
-    //  * and then the config properties -> value
-    //  *
-    //  * @return array
-    //  */
-    // function setupConfig()
-    // {
-    //     $config_fields = $this->getSubSettings('child-projects');
-    //     return $config_fields;
-    //
-    // }
+
+
+    // MMD CHILD INFO
+    private $config;             // Current round of settings
+
+    private $child_pid;
+    private $child_record_id;
+    private $child_event_id;
+    private $child_event_name;
+
+
+
+     /**
+     * Hook method which gets called at save
+     *
+     * @param $project_id
+     * @param null $record
+     * @param $instrument
+     * @param $event_id
+     * @param null $group_id
+     * @param null $survey_hash
+     * @param null $response_id
+     * @param int $repeat_instance
+     */
+    function hook_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance)
+    {
+
+        // WRITE OUT PARENT INFORMATION TO OBJECT
+        $this->project_id        = $project_id;
+        $this->record_id         = $record;
+        $this->instrument        = $instrument;
+        $this->event_id          = $event_id;
+        $this->redcap_event_name = \REDCap::getEventNames(true, false, $event_id);
+
+        $this->emDebug(
+            "PROJECT: $project_id",
+            "RECORD: $record",
+            "EVENT_ID: $event_id",
+            "INSTRUMENT: $instrument",
+            "REDCAP_EVENT_NAME: " . $this->redcap_event_name);
+
+        // Loop through each MMD Setting
+        $subsettings = $this->getSubSettings('child-projects');
+        foreach ($subsettings as $config) {
+            $this->emDebug("config", $config);
+            $this->handleChildProject($config);
+        }
+    }
+
 
     /**
      * Migrate data for child project specified in $config parameter
@@ -34,87 +84,118 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      */
     function handleChildProject($config)
     {
+
+
+
         //get record_id
-        $pk_field = \REDCap::getRecordIdField();
-        $record_id = $this->record_id;
-        $page = $this->instrument;
-        $event_id = $this->event_id;
+        $pk_field   = REDCap::getRecordIdField();
+        $record_id  = $this->record_id;
+        $instrument = $this->instrument;
+        $event_id   = $this->event_id;
         $event_name = $this->redcap_event_name;
 
-        //0. CHECK if in right EVENT
+
+        //get child pid and get data
+        $child_pid = $config['child-project-id'];
+
+
+
+        //0. CHECK if in right EVENT (only applies if master-event-name is not null)
         $trigger_event = $config['master-event-name'];
-        //$this->emLog("Trigger event is $trigger_event EVENT ID is  $event_id and EVNET NAME is $event_name");
+        $this->emDebug("Trigger event", $trigger_event, "Current Event", $event_id);
+
+        // If event is specified but different than current event, then we can abort
         if ((!empty($trigger_event)) && ($trigger_event != $event_id)) {
+            // TODO: We may want to consider removing this - would you ever want to store the field with the logic in another event?
+            $this->emDebug("Aborting - wrong event");
             return false;
         }
 
         //0. CHECK if in the right instrument
         $trigger_form = $config['trigger-form'];
-        if ((!empty($trigger_form)) && ($trigger_form != $page)) {
+        if ((!empty($trigger_form)) && ($trigger_form != $instrument)) {
+            $this->emDebug("Aborting - wrong instrument");
             return false;
         }
+
         //$this->emLog("Found trigger form ". $trigger_form);
 
         //1. CHECK if migration has already been completed
-        $parent_fields[] = $config['parent-field-for-child-id'];
-        $parent_fields[] = $config['migration-timestamp'];
-        $child_field_clobber = $config['child-field-clobber'];
+        $parent_fields = array_filter(array(
+            $config['migration-timestamp'],
+            $config['parent-field-for-child-id']
+        ));
 
-        $results = \REDCap::getData('json', $record_id, $parent_fields);
-        $results = json_decode($results, true);
-        $newData = current($results);
+        $results    = REDCap::getData('json', $record_id, $parent_fields);
+        $results    = json_decode($results, true);
+        $parentData = current($results);
 
         //check if timestamp and child_id are set (both? just one?)
         //if exists, then don't do anything since already migrated
-        $migration_timestamp = $newData[$config['migration-timestamp']];
-        $parent_field_for_child_id = $newData[$config['parent-field-for-child-id']];
+        $migration_timestamp        = $parentData[$config['migration-timestamp']];
+        $parent_field_for_child_id  = $parentData[$config['parent-field-for-child-id']];
 
-        //get  child pid and get data
-        $child_pid = $config['child-project-id'];
+
+
+        $child_field_clobber = $config['child-field-clobber'];
+
 
         //migration_timestamp already has a value and Child_field_clobber is not set
-        if (!empty($migration_timestamp && ($child_field_clobber!='1')) ) { //|| (isset($migration_timestamp))) {
-            //xTODO: add to logging?
+        if (!empty($migration_timestamp) && ($child_field_clobber != '1')) {
+            // Timestamp present - do not re-migrate
             $existing_msg = "No data migration: Clobber not turned on and migration already completed for record "
                 . $record_id . " to child project " . $child_pid;
-            $this->emLog($existing_msg);
+            $this->emDebug($existing_msg);
 
-            //reset the migration timestamp and child_id
-            $log_data = array();
-            $log_data[$config['parent-field-for-child-id']] = '';
-            $log_data[$config['migration-timestamp']] = date('Y-m-d H:i:s');
-
-            //UPDATE PARENT LOG
-            $this->updateNoteInParent($record_id, $pk_field, $config, $existing_msg, $log_data);
+            // //reset the migration timestamp and child_id
+            // $log_data = array();
+            // $log_data[$config['parent-field-for-child-id']] = '';
+            // $log_data[$config['migration-timestamp']] = date('Y-m-d H:i:s');
+            //
+            // //UPDATE PARENT LOG
+            // // TODO: REVIEW (ANDY) - DO WE UPDATE PARENT LOGS ON SKIPPING RE-MIGRATION?
+            // $this->updateNoteInParent($record_id, $pk_field, $config, $existing_msg, $log_data);
 
             return false;
         }
-        $this->emLog("Doing data migration: Clobber: ".$child_field_clobber. " and ".
-            " Migration timestamp:  ".$migration_timestamp . "  record: "
-            . $record_id . " to child project " . $child_pid);
+
+        $this->emDebug("Doing data migration",
+            "Clobber: " . $child_field_clobber,
+            "Migration timestamp: " . $migration_timestamp,
+            "Record: " . $record_id,
+            "Child project: " . $child_pid
+        );
+
 
         //2. CHECK IF LOGIC IS TRIGGERED
         $mirror_logic = $config['mirror-logic'];
-        // validation
-        if (! $this->testLogic($mirror_logic, $record_id)) {
-            $this->emLog($mirror_logic, "DEBUG", "LOGIC validated to false so skipping");
-            return false;
+        if (!empty($mirror_logic)) {
+            $result = REDCap::evaluateLogic($mirror_logic, $this->project_id, $this->record_id, $this->redcap_event_name);
+            if ($result === false) {
+                $this->emDebug("Logic False - Skipping");
+                return false;
+            }
         }
+
 
         //3. INTERSECT FIELDS:  Get fields present in screening project that are also present in the main project
         //3A. Restrict fields to specified forms?
         //todo: UI for config should have dropdown for child forms (only available for current project (parent))
 
+
         $arr_fields = $this->getIntersectFields($child_pid, $this->project_id, $config['fields-to-migrate'],  $config['include-only-form-child'],
             $config['include-only-form-parent'], $config['exclude-fields'],$config['include-only-fields']);
-        //$this->emDebug($arr_fields, "INTERSECTION is of count ".count($arr_fields));
 
-        if (count($arr_fields)<1) {
+        $this->emDebug("Intersection is " . count($arr_fields));
+
+        if (empty($arr_fields)) {
             //Log msg in Notes field
             $msg = "There were no intersect fields between the parent (" . $this->project_id .
                 ") and child projects (" . $child_pid . ").";
-            //$this->emLog($msg);
+            $this->emDebug($msg);
             //reset the migration timestamp and child_id
+
+            // TODO: ABM - I DONT UNDERSTAND WHY WE RESET HERE?
             $log_data = array();
             $log_data[$config['parent-field-for-child-id']] = '';
             $log_data[$config['migration-timestamp']] = date('Y-m-d H:i:s');
@@ -126,28 +207,32 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
         //modules method doesn't seem to have option for select list?
         //$data = $this->getData($this->project_id, $record_id);
-        $results = \REDCap::getData('json', $record_id, $arr_fields, $config['master-event-name']);
-        $results = json_decode($results, true);
-        $newData = current($results);
 
-        //$this->emDebug($newData, "INTERSECT DATA");
+        $results = REDCap::getData('json', $record_id, $arr_fields, $config['master-event-name']);
+        $results = json_decode($results, true);
+        $parentData = current($results);
+
+        // $this->emDebug("DATA FROM PARENT INTERSECT FIELDS", $parentData);
 
         //get primary key for TARGET project
         $child_pk = self::getPrimaryKey($child_pid);
 
         //5.5 Determine the ID in the CHILD project.
-        $child_id = $this->getNextIDInTarget($record_id, $config, $child_pid);
+        $child_id = $this->getChildRecordId($record_id, $config, $child_pid);
 
         //5.6 check if this child id already exists?  IF yes, check clobber. maybe not necesssary, since overwrite will handle it.
         // actually go ahead and do it to handle cases where they only want one initial creation.
         //todo: this event name is only for TARGET form.  not for logging variable
         $child_event_name = $config['child-event-name'];
 
-        $results = \REDCap::getData($child_pid, 'json', $child_id, null, $config['child-event-name']);
+        $results = REDCap::getData($child_pid, 'json', $child_id, null, $config['child-event-name']);
         $results = json_decode($results, true);
         $target_results = current($results);
 
         //$this->emDebug(empty($target_results),$target_results, "TARGET DATA for child id $child_id in pid $child_pid with event $child_event_name");
+
+        // Place to keep optional data for parent record
+        $parent_data = array();
 
         if ( (!empty($target_results))  && ($child_field_clobber!='1'))  {
             //Log no migration
@@ -165,31 +250,31 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
             //add additional fields to be added to the SaveData call
             //set the new ID
-            $newData[$child_pk] = $child_id;
+            $parentData[$child_pk] = $child_id;
             if (!empty($child_event_name)) {
-                $newData['redcap_event_name'] = ($child_event_name);
+                $parentData['redcap_event_name'] = ($child_event_name);
             }
 
             //enter logging field for child-field-for-parent-id
             if (!empty($child_field_for_parent_id)) {
-                $newData[$child_field_for_parent_id] = $this->record_id;
+                $parentData[$child_field_for_parent_id] = $this->record_id;
             }
 
             //$this->emLog($newData, "SAVING THIS TO CHILD DATA");
 
             //6. UPDATE CHILD: Upload the data to child project
-            $result = \REDCap::saveData(
-                $child_pid,
-                'json',
-                json_encode(array($newData)),
-                (($child_field_clobber == '1') ? 'overwrite' : 'normal'));
 
+            // $result = REDCap::saveData(
+            //     $child_pid,
+            //     'json',
+            //     json_encode(array($newData)),
+            //     (($child_field_clobber == '1') ? 'overwrite' : 'normal'));
 
             // IN ORDER TO BE ABLE TO COPY CAT INSTRUMENTS WE ARE GOING TO USE THE UNDERLYING RECORDS SAVE METHOD INSTEAD OF REDCAP METHOD:
             $args = array(
                 0 => $child_pid,
                 1 => 'json',
-                2 => json_encode(array($newData)),
+                2 => json_encode(array($parentData)),
                 3 => ($child_field_clobber == '1') ? 'overwrite' : 'normal',
                 4 => 'YMD',
                 5 => 'flat',
@@ -209,57 +294,50 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
             $result = call_user_func_array(array("Records", "saveData"), $args);
 
-            \Plugin::log("SAVE RESULT", $result);
-
-
-
-
+            $this->emDebug("SAVE RESULT", $result);
 
 
             // Check for upload errors
-            $parent_data = array();
-
             if (!empty($result['errors'])) {
                 $msg = "Error creating record in CHILD project " . $child_pid . " - ask administrator to review logs: " . print_r($result['errors'], true);
-
                 $this->emError($msg);
-                $this->emError($result, "DEBUG", "CHILD ERROR");
+                $this->emError("CHILD ERROR", $result);
             } else {
                 $msg = "Successfully migrated.";
-                if (isset($config['parent-field-for-child-id'])) {
-                    $parent_data[$config['parent-field-for-child-id']] = $child_id;
-                }
-                if (isset($config['migration-timestamp'])) {
-                    $parent_data[$config['migration-timestamp']] = date('Y-m-d H:i:s');
-                }
+                if (!empty($config['parent-field-for-child-id'])) $parent_data[$config['parent-field-for-child-id']] = $child_id;
+                if (!empty($config['migration-timestamp']))       $parent_data[$config['migration-timestamp']] = date('Y-m-d H:i:s');
             }
         }
 
-        //$this->emLog($parent_data, "DEBUG", "PASSING IN THIS DATA");
         //7. UPDATE PARENT
         $this->updateNoteInParent($record_id, $pk_field, $config, $msg, $parent_data);
 
         return true;
     }
 
-    function getNextIDInTarget($record_id, $config, $child_pid) {
-        //$this->emDebug($config);
+
+    // Get the record id for the child
+    function getChildRecordId($record_id, $config, $child_pid) {
 
         $child_id = null;
+
+        // Method for creating the child id (child-id-create-new, child-id-like-parent, child-id-parent-specified)
         $child_id_select = $config['child-id-select'];
+
         //get primary key for TARGET project
         $child_pk = self::getPrimaryKey($child_pid);
+
+        $this->emDebug($record_id,$child_pid,$child_id_select, $child_pk);
 
         switch ($child_id_select) {
             case 'child-id-like-parent':
                 $child_id = $this->record_id;
-                //$this->emDebug($child_id,  "CHILD ID: USING PARENT ID: ".$child_id);
                 break;
             case 'child-id-parent-specified':
                 $child_id_parent_specified_field = $config['child-id-parent-specified-field'];
 
                 //get data from parent for the value in this field
-                $results = \REDCap::getData('json', $record_id, $child_id_parent_specified_field, $config['master-event-name']);
+                $results = REDCap::getData('json', $record_id, array($child_id_parent_specified_field), $config['master-event-name']);
                 $results = json_decode($results, true);
                 $existing_target_data = current($results);
 
@@ -267,21 +345,22 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                 $this->emDebug($existing_target_data,$child_id_parent_specified_field, $child_id,  "PARENT SPECIFIED CHILD ID: ".$child_id);
                 break;
             case 'child-id-create-new':
-                $child_id_prefix = $config['child-id-prefix'];
+                $child_id_prefix  = $config['child-id-prefix'];
                 $child_id_padding = $config['child-id-padding'];
 
                 $event_id = self::getEventIdFromName($child_pid, $config['child-event-name']);
                 //get next id from child project
-                $next_id = $this->getNextID($child_pid,$event_id, $child_id_prefix, $child_id_padding);
-                $child_id = $next_id;
+                $child_id = $this->getNextID($child_pid, $event_id, $child_id_prefix, $child_id_padding);
                 break;
             default:
                 $event_id = self::getEventIdFromName($child_pid, $config['child-event-name']);
-                $next_id = $this->getNextID($child_pid, $event_id);
-                $child_id = $next_id;
+                $child_id = $this->getNextID($child_pid, $event_id);
         }
         return $child_id;
     }
+
+
+
 
     function getIntersectFields($child_pid, $parent_pid, $fields_to_migrate, $include_from_child_form, $include_from_parent_form,
                                 $exclude, $include_only) {
@@ -342,12 +421,12 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
     /**
      * Bubble up status to user via the timestamp and notes field in the parent form
      * in config file as 'migration-notes'
-     * @param $record_id : record_id of current record
-     * @param $pk_field : the first field in parent project (primary key)
-     * @param $config : config fields for migration module
-     * @param $msg : Message to enter into Notes field
+     * @param $record_id   : record_id of current record
+     * @param $pk_field    : the first field in parent project (primary key)
+     * @param $config      : config fields for migration module
+     * @param $msg         : Message to enter into Notes field
      * @param $parent_data : If child migration successful, data about migration to child (else leave as null)
-     * @return bool : return fail/pass status of save data
+     * @return bool        : return fail/pass status of save data
      */
     function updateNoteInParent($record_id, $pk_field, $config, $msg, $parent_data = array()) {
         //$this->emLog($parent_data, "DEBUG", "RECEIVED THIS DATA");
@@ -360,17 +439,15 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             //assuming that current event is the right event
             $master_event = $this->redcap_event_name; // \REDCap::getEventNames(true, false, $config['master-event-name']);
             //$this->emLog("Event name from REDCap::getEventNames : $master_event / EVENT name from this->redcap_event_name: ".$this->redcap_event_name);
-
             $parent_data['redcap_event_name'] = $master_event; //$config['master-event-name'];
         }
 
         //$this->emLog($parent_data, "Saving Parent Data");
-        $result = \REDCap::saveData(
+        $result = REDCap::saveData(
             $this->project_id,
             'json',
             json_encode(array($parent_data)),
             'overwrite');
-
 
         // Check for upload errors
         if (!empty($result['errors'])) {
@@ -380,60 +457,26 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             $this->emError($msg);
             $this->emError("RESULT OF PARENT: " .print_r($result, true));
             //logEvent($description, $changes_made="", $sql="", $record=null, $event_id=null, $project_id=null);
-            \REDCap::logEvent("Mirror Master Data Module", $msg, NULL, $record_id, $config['master-event-name']);
+            REDCap::logEvent("Mirror Master Data Module", $msg, NULL, $record_id, $config['master-event-name']);
             return false;
         }
 
     }
-    /**
-     * @param $logic
-     * @param $record
-     * @return bool|string
-     */
-    function testLogic($logic, $record) {
 
-//      $this->emLog('Testing record '. $record . ' with ' . $logic, "DEBUG");
-        //if blank logic, then return true;
-        if (empty($logic)) {
-            return true;
-        }
 
-//        $this->emLog('EVENT FOR  '. $record . ' is ' . $this->redcap_event_name, "DEBUG");
-        if (\LogicTester::isValid($logic)) {
 
-            // Append current event details
-            if (\REDCap::isLongitudinal() && $this->redcap_event_name) {
-                $logic = \LogicTester::logicPrependEventName($logic, $this->redcap_event_name);
-                $this->emLog(__FUNCTION__ . ": logic updated with selected event as " . $logic, "INFO");
-            }
-
-            if (\LogicTester::evaluateLogicSingleRecord($logic, $record)) {
-                $result = true;
-            } else {
-                $result = false;
-                return false;
-            }
-        } else {
-            $result = "Invalid Syntax";
-            $this->emError($result, "DEBUG", "LOGIC : INVALID SYNTAX");
-        }
-        return $result;
-    }
-
-    static function getPrimaryKey($target_project_pid) {
+    static function getPrimaryKey($project_id) {
         //need to find pk in target_project_pid
-        $target_dict = \REDCap::getDataDictionary($target_project_pid,'array');
-
-        reset($target_dict);
-        $pk = key($target_dict);
-
+        $dd = REDCap::getDataDictionary($project_id,'array');
+        reset($dd);
+        $pk = key($dd);
         return $pk;
-
     }
+
 
     /**
      * @param $pid
-     * @param $event_id  Pass NULL or '' if CLASSICAL
+     * @param int $event_id : Pass NULL or '' if CLASSICAL
      * @param string $prefix
      * @param bool $padding
      * @return bool|int|string
@@ -493,44 +536,14 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      */
     public static function getEventIdFromName($project_id, $event_name) {
         if (empty($event_name)) return NULL;
+
         $thisProj = new \Project($project_id,false);
         $thisProj->loadEventsForms();
         $event_id_names = $thisProj->getUniqueEventNames();
         $event_names_id = array_flip($event_id_names);
-        return isset($event_names_id[$event_name]) ? $event_names_id[$event_name] : NULL;
-    }
 
-    /**
-     * Hook method which gets called at save
-     *
-     * @param $project_id
-     * @param null $record
-     * @param $instrument
-     * @param $event_id
-     * @param null $group_id
-     * @param null $survey_hash
-     * @param null $response_id
-     * @param int $repeat_instance
-     */
-    function hook_save_record($project_id, $record = NULL, $instrument, $event_id, $group_id = NULL, $survey_hash = NULL, $response_id = NULL, $repeat_instance = 1)
-    {
-
-        $this->project_id = $project_id;
-        $this->record_id = $record;
-        $this->instrument = $instrument;
-        $this->event_id = $event_id;
-        $this->redcap_event_name = \REDCap::getEventNames(true, false, $event_id);
-
-        $this->emLog("PROJECTID: ".$project_id . " RECORD: " . $record . " EVENT_ID: ". $event_id . " INSTRUMENT: " . $instrument . " REDCAP_EVENT_NAME " . $this->redcap_event_name);
-        $subsettings = $this->getSubSettings('child-projects');
-
-        //iterate over each of the child records
-        //foreach ($this->config_fields as $key => $value) {
-        foreach ($subsettings as $key => $value) {
-            //$this->emLog("PROJECTID: ".$project_id ." : Dealing with child: $key", $value);
-            $this->emDebug("subsettings", $key, $value);
-            $this->handleChildProject($value);
-        }
+        $result = empty($event_names_id[$event_name]) ? NULL : $event_names_id[$event_name];
+        return $result;
     }
 
 
