@@ -259,7 +259,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
          * let check if parent record is in a DAG, if so lets find the corresponding Child DAG and update the data accordingly
          */
         if ($config['master-child-dags'] != '' && strpos($parentData['record_id'], '-') !== false) {
-            $this->getChildDAG($config['master-child-dags']);
+            $this->getChildDAG($config['master-child-dags'], $config['child-project-id']);
             $parentData = $this->prepareChildDagData($parentData);
         }
         // $this->emDebug("DATA FROM PARENT INTERSECT FIELDS", $parentData);
@@ -379,11 +379,11 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
     /**
      * @param string $config
      */
-    private function getChildDAG($config)
+    private function getChildDAG($config, $childProjectId)
     {
-        $dags = json_decode($config[0], true);
+        $dags = json_decode($config, true);
         $child = strtolower($dags['child']);
-        $sql = "SELECT group_id FROM redcap_data_access_groups WHERE LOWER(group_name) = '$child'";
+        $sql = "SELECT group_id FROM redcap_data_access_groups WHERE LOWER(group_name) = '$child' AND project_id = $childProjectId";
         $q = db_query($sql);
 
         $row = db_fetch_row($q);
