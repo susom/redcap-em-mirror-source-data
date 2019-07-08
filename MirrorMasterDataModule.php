@@ -377,7 +377,10 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
     }
 
     /**
-     * @param string $config
+     * get child dag based on saved value from config.json
+     * @param array $config
+     * @param int $childProjectId
+     * @return mixed
      */
     private function getChildDAG($config, $childProjectId)
     {
@@ -395,25 +398,32 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         }
     }
 
-    private function getNextRecordDAGID($datId)
+    /**
+     * @param int $dagId
+     * @return int
+     */
+    private function getNextRecordDAGID($dagId)
     {
-        $sql = "SELECT MAX(record) as record_id FROM redcap_data WHERE field_name = '__GROUPID__' AND `value` = $datId";
+        $sql = "SELECT MAX(record) as record_id FROM redcap_data WHERE field_name = '__GROUPID__' AND `value` = $dagId";
         $q = db_query($sql);
 
         $row = db_fetch_row($q);
         if (!empty($row)) {
             $parts = explode("-", $row[0]);
             $record_id = end($parts) + 1;
-            $this->setDagRecordId($datId . "-" . $record_id);
+            $this->setDagRecordId($dagId . "-" . $record_id);
         } else {
-            $this->setDagRecordId($datId . "-" . 1);
+            $this->setDagRecordId($dagId . "-" . 1);
         }
         return $this->getDagRecordId();
     }
 
+    /**
+     * @param array $parentData
+     * @return array
+     */
     private function prepareChildDagData($parentData)
     {
-
         $parentData['record_id'] = $this->getNextRecordDAGID($this->getDagId());
         return $parentData;
     }
