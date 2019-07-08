@@ -27,16 +27,6 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
     private $event_id;
     private $redcap_event_name;  //only set if longitudinal
 
-
-    // MMD CHILD INFO
-    private $config;             // Current round of settings
-
-    private $child_pid;
-    private $child_record_id;
-    private $child_event_id;
-    private $child_event_name;
-
-
     private $dagId;
 
     private $dagRecordId;
