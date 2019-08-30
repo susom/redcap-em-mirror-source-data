@@ -31,7 +31,6 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
     // MMD CHILD INFO
     private $config;             // Current round of settings
-
     private $child_pid;
     private $child_record_id;
     private $child_event_id;
@@ -306,6 +305,15 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                 $msg = "Successfully migrated.";
                 if (!empty($config['parent-field-for-child-id'])) $parent_data[$config['parent-field-for-child-id']] = $child_id;
                 if (!empty($config['migration-timestamp']))       $parent_data[$config['migration-timestamp']] = date('Y-m-d H:i:s');
+
+                // Call save_record hook on child?
+                $child_save_record_hook = $this->getProjectSetting('child-save-record-hook');
+                if ($child_save_record_hook) {
+                    // REDCap Hook injection point: Pass project_id and record name to method
+                    // TODO - Handle child group ID
+                    // \Hooks::call('redcap_save_record', array($child_pid, $child_id, $_GET['page'], $child_event_name, $group_id, null, null, $_GET['instance']));
+                    \Hooks::call('redcap_save_record', array($child_pid, $child_id, $_GET['page'], $child_event_name, null));
+                }
             }
         }
 
