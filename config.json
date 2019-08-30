@@ -211,7 +211,7 @@
 				{
 					"key": "child-save-record-hook",
 					"name": "<h6><span class='text-lg badge badge-lg badge-success'>TRIGGER SAVE RECORD HOOK ON CHILD</span></h6>If checked, the save_record hook will be triggered on the child record which may enable additional child EMs from performing actions.",
-					"required": true,
+					"required": false,
 					"type": "checkbox"
 				},
 				{
