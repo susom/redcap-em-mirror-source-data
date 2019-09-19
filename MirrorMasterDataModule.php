@@ -361,13 +361,11 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                     $record = array_pop($result['ids']);
                     $value = $this->getDagId();
                     $fieldName = '__GROUPID__';
-                    $x = "DELETE FROM redcap_data where project_id = $child_pid and event_id = $event_id and record = '$record' and field_name = '$fieldName'";
-                    $y = "INSERT INTO redcap_data (project_id, event_id, record, field_name, value) VALUES ($child_pid, $event_id, '$record', '$fieldName', '$value')";
                     $this->query("DELETE FROM redcap_data where project_id = $child_pid and event_id = $event_id and record = '$record' and field_name = '$fieldName'");
 
                     $this->query("INSERT INTO redcap_data (project_id, event_id, record, field_name, value) VALUES ($child_pid, $event_id, '$record', '$fieldName', '$value')");
                     //
-                    //$this->setDAG(array_pop($result['ids']), $this->getDagId(), $child_pid);
+                    //$this->setDAG(array_pop($result['ids']), $this->getDagId(), $child_pid, $event_id);
                 }
                 $msg = "Successfully migrated.";
                 if (!empty($config['parent-field-for-child-id'])) {
