@@ -348,7 +348,26 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                  * let check if parent record is in a DAG, if so lets find the corresponding Child DAG and update the data accordingly
                  */
                 if ($config['master-child-dags'] != '') {
-                    $this->setDAG(array_pop($result['ids']), $this->getDagId(), $child_pid);
+
+                    //get first event in case child event name is not  defined.
+                    if ($child_event_name == "" || $child_event_name == null) {
+                        $event_id = $this->getFirstEventId($child_pid);
+                    } else {
+                        $event_id = REDCap::getEventIdFromUniqueEvent($child_event_name);
+                    }
+                    /**
+                     * temp solution till pull request is approved by Venderbilt
+                     */
+                    $record = array_pop($result['ids']);
+                    $value = $this->getDagId();
+                    $fieldName = '__GROUPID__';
+                    $x = "DELETE FROM redcap_data where project_id = $child_pid and event_id = $event_id and record = '$record' and field_name = '$fieldName'";
+                    $y = "INSERT INTO redcap_data (project_id, event_id, record, field_name, value) VALUES ($child_pid, $event_id, '$record', '$fieldName', '$value')";
+                    $this->query("DELETE FROM redcap_data where project_id = $child_pid and event_id = $event_id and record = '$record' and field_name = '$fieldName'");
+
+                    $this->query("INSERT INTO redcap_data (project_id, event_id, record, field_name, value) VALUES ($child_pid, $event_id, '$record', '$fieldName', '$value')");
+                    //
+                    //$this->setDAG(array_pop($result['ids']), $this->getDagId(), $child_pid);
                 }
                 $msg = "Successfully migrated.";
                 if (!empty($config['parent-field-for-child-id'])) {
