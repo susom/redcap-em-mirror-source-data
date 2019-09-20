@@ -109,6 +109,18 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         }
     }
 
+    private function isUserInDAG($projecId, $username, $group_id)
+    {
+        $sql = "SELECT username FROM redcap_user_rights WHERE username = '$username' AND group_id = $group_id AND project_id = $projecId";
+        $q = db_query($sql);
+
+        $row = db_fetch_row($q);
+        if (!empty($row)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
 
     /**
      * Migrate data for child project specified in $config parameter
@@ -251,6 +263,11 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         if ($config['master-child-dags'] != '' && strpos($parentData[$pk_field], '-') !== false) {
             $this->getChildDAG($config['master-child-dags'], $config['child-project-id']);
             $parentData = $this->prepareChildDagData($parentData, $pk_field);
+            if ($config['master-child-dags'] != '' && !$this->isUserInDAG($config['child-project-id'], USERID,
+                    $this->getDagId())) {
+                //we are in wrong DAG
+                return false;
+            }
         }
         // $this->emDebug("DATA FROM PARENT INTERSECT FIELDS", $parentData);
 
@@ -364,6 +381,20 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                     $this->query("DELETE FROM redcap_data where project_id = $child_pid and event_id = $event_id and record = '$record' and field_name = '$fieldName'");
 
                     $this->query("INSERT INTO redcap_data (project_id, event_id, record, field_name, value) VALUES ($child_pid, $event_id, '$record', '$fieldName', '$value')");
+
+                    $arm = getArm();
+
+                    $result = $this->query("SELECT MAX(sort) as max_sort FROM redcap_record_list where project_id = $child_pid and arm = $arm and record = '$record' and dag_id = '$value'");
+
+                    $max = $result->fetch_assoc()['max_sort'] + 1;
+                    if ($max == null) {
+                        $max = 1;
+                    }
+                    $xxx = "INSERT INTO redcap_record_list (project_id, arm, record, dag_id, sort) VALUES ($child_pid, $arm, '$record', '$value', '$max')";
+                    $this->query("DELETE FROM redcap_record_list WHERE project_id = $child_pid and arm = $arm and record = '$record'");
+
+                    $this->query("INSERT INTO redcap_record_list (project_id, arm, record, dag_id, sort) VALUES ($child_pid, $arm, '$record', '$value', '$max')");
+
                     //
                     //$this->setDAG(array_pop($result['ids']), $this->getDagId(), $child_pid, $event_id);
                 }
