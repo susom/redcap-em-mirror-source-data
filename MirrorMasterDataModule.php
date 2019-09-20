@@ -248,9 +248,9 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         /**
          * let check if parent record is in a DAG, if so lets find the corresponding Child DAG and update the data accordingly
          */
-        if ($config['master-child-dags'] != '' && strpos($parentData['record_id'], '-') !== false) {
+        if ($config['master-child-dags'] != '' && strpos($parentData[$pk_field], '-') !== false) {
             $this->getChildDAG($config['master-child-dags'], $config['child-project-id']);
-            $parentData = $this->prepareChildDagData($parentData);
+            $parentData = $this->prepareChildDagData($parentData, $pk_field);
         }
         // $this->emDebug("DATA FROM PARENT INTERSECT FIELDS", $parentData);
 
@@ -429,9 +429,9 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      * @param array $parentData
      * @return array
      */
-    private function prepareChildDagData($parentData)
+    private function prepareChildDagData($parentData, $pk_field)
     {
-        $parentData['record_id'] = $this->getNextRecordDAGID($this->getDagId());
+        $parentData[$pk_field] = $this->getNextRecordDAGID($this->getDagId());
         return $parentData;
     }
     // Get the record id for the child
