@@ -268,7 +268,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         /**
          * let check if parent record is in a DAG, if so lets find the corresponding Child DAG and update the data accordingly
          */
-        if ($config['master-child-dags'] != '' && strpos($parentData[$pk_field], '-') !== false) {
+        if ($config['master-child-dags'] != '' && strpos($record_id, '-') !== false) {
             $this->getChildDAG($config['master-child-dags'], $config['child-project-id']);
             $parentData = $this->prepareChildDagData($parentData, $pk_field);
             if ($config['master-child-dags'] != '' && !$this->isUserInDAG($config['child-project-id'], USERID,
@@ -374,11 +374,12 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                  */
                 if ($config['master-child-dags'] != '') {
 
+                    $childProject = new \Project($child_pid);
                     //get first event in case child event name is not  defined.
                     if ($child_event_name == "" || $child_event_name == null) {
                         $event_id = $this->getFirstEventId($child_pid);
                     } else {
-                        $event_id = REDCap::getEventIdFromUniqueEvent($child_event_name);
+                        $event_id = $childProject->getEventIdUsingUniqueEventName($child_event_name);
                     }
                     /**
                      * temp solution till pull request is approved by Venderbilt
