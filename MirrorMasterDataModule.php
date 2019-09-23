@@ -407,8 +407,12 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                     //$this->setDAG(array_pop($result['ids']), $this->getDagId(), $child_pid, $event_id);
                 }
                 $msg = "Successfully migrated.";
-                if (!empty($config['parent-field-for-child-id'])) $parent_data[$config['parent-field-for-child-id']] = $child_id;
-                if (!empty($config['migration-timestamp']))       $parent_data[$config['migration-timestamp']] = date('Y-m-d H:i:s');
+                if (!empty($config['parent-field-for-child-id'])) {
+                    $parent_data[$config['parent-field-for-child-id']] = $child_id;
+                }
+                if (!empty($config['migration-timestamp'])) {
+                    $parent_data[$config['migration-timestamp']] = date('Y-m-d H:i:s');
+                }
 
                 // Call save_record hook on child?
                 $child_save_record_hook = $this->getProjectSetting('child-save-record-hook');

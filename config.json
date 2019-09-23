@@ -77,6 +77,12 @@
 					"type": "form-list"
 				},
 				{
+					"key": "master-child-dags",
+					"name": "<h6><span class='text-lg badge badge-lg badge-success'>Master-Child DAGs</span></h6>Add Json that contains the name of master and child DAGs in following format<pre>{\n\"master\" : [MASTER_DAG_NAME],\n\"child\": [CHILD_DAG_NAME]\n}</pre>",
+					"required": false,
+					"type": "textarea"
+				},
+				{
 					"key": "child-project-id",
 					"name": "<h6><span class='text-lg badge badge-lg badge-danger'>SELECT CHILD PROJECT</span></h6>You must have access to the project to select it below",
 					"required": true,
