@@ -209,6 +209,12 @@
 					"type": "checkbox"
 				},
 				{
+					"key": "child-save-record-hook",
+					"name": "<h6><span class='text-lg badge badge-lg badge-success'>TRIGGER SAVE RECORD HOOK ON CHILD</span></h6>If checked, the save_record hook will be triggered on the child record which may enable additional child EMs from performing actions.",
+					"required": false,
+					"type": "checkbox"
+				},
+				{
 					"key": "migration-timestamp",
 					"name": "<h6><span class='text-lg badge badge-lg badge-success'>MIGRATION TIMESTAMP FIELD</span></h6>This required field in the parent project stores the timestamp when migration was completed.<br><u>Migration only takes place when this field is empty unless <b>Clobber existing data</b> is checked.</u>",
 					"required": true,
