@@ -271,7 +271,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         if ($config['master-child-dags'] != '' && strpos($record_id, '-') !== false) {
             $this->emDebug("prepare child DAG");
             $this->getChildDAG($config['master-child-dags'], $config['child-project-id']);
-            $parentData = $this->prepareChildDagData($parentData, $pk_field);
+            $parentData = $this->prepareChildDagData($parentData, $config['child-project-id'], $pk_field);
             if ($config['master-child-dags'] != '' && !$this->isUserInDAG($config['child-project-id'], USERID,
                     $this->getDagId())) {
                 //we are in wrong DAG
@@ -457,13 +457,14 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
     }
 
     /**
-     * @param int $dagId
-     * @return int
+     * @param $childProjectId
+     * @param $dagId
+     * @return mixed
      */
-    private function getNextRecordDAGID($dagId)
+    private function getNextRecordDAGID($childProjectId, $dagId)
     {
         $this->emDebug("find next record id");
-        $sql = "SELECT MAX(record) as record_id FROM redcap_data WHERE field_name = '__GROUPID__' AND `value` = $dagId";
+        $sql = "SELECT MAX(record) as record_id FROM redcap_data WHERE field_name = '__GROUPID__' AND `value` = $dagId AND project_id = '$childProjectId'";
         $q = db_query($sql);
 
         $row = db_fetch_row($q);
@@ -481,9 +482,9 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      * @param array $parentData
      * @return array
      */
-    private function prepareChildDagData($parentData, $pk_field)
+    private function prepareChildDagData($parentData, $childProejctId, $pk_field)
     {
-        $parentData[$pk_field] = $this->getNextRecordDAGID($this->getDagId());
+        $parentData[$pk_field] = $this->getNextRecordDAGID($childProejctId, $this->getDagId());
         return $parentData;
     }
     // Get the record id for the child
