@@ -111,12 +111,77 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
         // Loop through each MMD Setting
         $subsettings = $this->getSubSettings('child-projects');
-        foreach ($subsettings as $config) {
-            $this->emDebug("config", $config);
-            $this->handleChildProject($config);
+
+        /**
+         * these are list of IDs
+         */
+        $mappedMasterDags = $this->getProjectSetting('master-dag');
+
+        /**
+         * these are list of text
+         */
+        $mappedChildrenDags = $this->getProjectSetting('child-dag');
+        foreach ($subsettings as $key => $config) {
+            /**
+             * we need to process on DAG level if DAGs are defined
+             */
+            if ($config['same-dags-name'] || !empty($config['master-child-dag-map'])) {
+                if ($config['same-dags-name']) {
+                    $masterDags = $this->getProjectDags($project_id);
+                    while ($row = db_fetch_assoc($masterDags)) {
+                        $childDag = $this->getProjectDags($config['child-project-id'], $row['group_name']);
+                        if ($childDag) {
+                            $childRow = db_fetch_assoc($childDag);
+                            $dags[] = array("master" => $row['group_id'], "child" => $childRow['group_id']);
+                            $config['master-child-dags'] = json_encode($dags);
+                        } else {
+                            //in case no match let check if dags map is manually defined
+                            $childDagIndex = $this->searchForDAGIndex($mappedMasterDags[$key], $row['group_id']);
+                            if (!is_null($childDagIndex)) {
+                                $dags[] = array("master" => $row['group_id'],
+                                    "child" => $this->getProjectDAGID($config['child-project-id'],
+                                        $mappedChildrenDags[$key][$childDagIndex])
+                                );
+                            }
+                        }
+                    }
+                } else {
+                    if ($config['master-child-dag-map']) {
+                        foreach ($config['master-child-dag-map'] as $instanceKey => $instance) {
+                            $dags[] = array("master" => $mappedMasterDags[$key][$instanceKey],
+                                "child" => $this->getProjectDAGID($config['child-project-id'],
+                                    $mappedChildrenDags[$key][$instanceKey])
+                            );
+                        }
+                    }
+
+                }
+            }
+
+
+            if (!empty($dags)) {
+                foreach ($dags as $dag) {
+                    $config['master-child-dags'] = json_encode($dag);
+                    $this->setDagId($dag['child']);
+                    $this->emDebug("config", $config);
+                    $this->handleChildProject($config);
+                }
+            } else {
+                $this->emDebug("config", $config);
+                $this->handleChildProject($config);
+            }
         }
     }
 
+    private function searchForDAGIndex($dags, $name)
+    {
+        foreach ($dags as $key => $dag) {
+            if ($dag == $name) {
+                return $key;
+            }
+        }
+        return null;
+    }
     private function isUserInDAG($projecId, $username, $group_id)
     {
         $sql = "SELECT username FROM redcap_user_rights WHERE username = '$username' AND group_id = $group_id AND project_id = $projecId";
@@ -268,10 +333,11 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         /**
          * let check if parent record is in a DAG, if so lets find the corresponding Child DAG and update the data accordingly
          */
-        if ($config['master-child-dags'] != '' && strpos($parentData[$pk_field], '-') !== false) {
-            $this->getChildDAG($config['master-child-dags'], $config['child-project-id']);
-            $parentData = $this->prepareChildDagData($parentData, $pk_field);
-            if ($config['master-child-dags'] != '' && !$this->isUserInDAG($config['child-project-id'], USERID,
+        if (($config['same-dags-name'] || !empty($config['master-child-dag-map'])) && strpos($record_id,
+                '-') !== false) {
+            $parentData = $this->prepareChildDagData($parentData, $child_pid, $pk_field);
+            if (($config['same-dags-name'] || !empty($config['master-child-dag-map'])) && !$this->isUserInDAG($config['child-project-id'],
+                    USERID,
                     $this->getDagId())) {
                 //we are in wrong DAG
                 return false;
@@ -372,13 +438,14 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                 /**
                  * let check if parent record is in a DAG, if so lets find the corresponding Child DAG and update the data accordingly
                  */
-                if ($config['master-child-dags'] != '') {
+                if (($config['same-dags-name'] || !empty($config['master-child-dag-map'])) && !empty($this->getDagId())) {
 
+                    $childProject = new \Project($child_pid);
                     //get first event in case child event name is not  defined.
                     if ($child_event_name == "" || $child_event_name == null) {
                         $event_id = $this->getFirstEventId($child_pid);
                     } else {
-                        $event_id = REDCap::getEventIdFromUniqueEvent($child_event_name);
+                        $event_id = $childProject->getEventIdUsingUniqueEventName($child_event_name);
                     }
                     /**
                      * temp solution till pull request is approved by Venderbilt
@@ -432,25 +499,33 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         return true;
     }
 
-    /**
-     * get child dag based on saved value from config.json
-     * @param array $config
-     * @param int $childProjectId
-     * @return mixed
-     */
-    private function getChildDAG($config, $childProjectId)
+    private function getProjectDAGID($projectId, $name)
     {
-        $dags = json_decode($config, true);
-        $child = strtolower($dags['child']);
-        $sql = "SELECT group_id FROM redcap_data_access_groups WHERE LOWER(group_name) = '$child' AND project_id = $childProjectId";
+        $sql = "SELECT group_id FROM redcap_data_access_groups WHERE project_id = '$projectId' AND group_name = '$name'";
         $q = db_query($sql);
 
-        $row = db_fetch_row($q);
-        if (!empty($row)) {
-            $this->setDagId($row[0]);
-            return $this->getDagId();
+        if (db_num_rows($q) > 0) {
+            $row = db_fetch_assoc($q);
+            return $row['group_id'];
         } else {
-            $this->emDebug("No Child DAG found");
+            return false;
+        }
+    }
+
+    private function getProjectDags($projectId, $name = null)
+    {
+        if (is_null($name)) {
+            $sql = "SELECT * FROM redcap_data_access_groups WHERE  project_id = $projectId";
+        } else {
+            $sql = "SELECT * FROM redcap_data_access_groups WHERE LOWER(group_name) = '$name' AND project_id = $projectId";
+        }
+
+        $q = db_query($sql);
+
+        if (db_num_rows($q) > 0) {
+            return $q;
+        } else {
+            return false;
         }
     }
 
@@ -458,9 +533,9 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      * @param int $dagId
      * @return int
      */
-    private function getNextRecordDAGID($dagId)
+    private function getNextRecordDAGID($childProjectId, $dagId)
     {
-        $sql = "SELECT MAX(record) as record_id FROM redcap_data WHERE field_name = '__GROUPID__' AND `value` = $dagId";
+        $sql = "SELECT MAX(record) as record_id FROM redcap_data WHERE field_name = '__GROUPID__' AND `value` = $dagId AND project_id = '$childProjectId'";
         $q = db_query($sql);
 
         $row = db_fetch_row($q);
@@ -478,9 +553,9 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      * @param array $parentData
      * @return array
      */
-    private function prepareChildDagData($parentData, $pk_field)
+    private function prepareChildDagData($parentData, $child_pid, $pk_field)
     {
-        $parentData[$pk_field] = $this->getNextRecordDAGID($this->getDagId());
+        $parentData[$pk_field] = $this->getNextRecordDAGID($child_pid, $this->getDagId());
         return $parentData;
     }
     // Get the record id for the child
