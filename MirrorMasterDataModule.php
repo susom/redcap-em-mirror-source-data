@@ -373,7 +373,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                 /**
                  * let check if parent record is in a DAG, if so lets find the corresponding Child DAG and update the data accordingly
                  */
-                if ($config['master-child-dags'] != '') {
+                if ($config['master-child-dags'] != '' && !empty($this->getDagId())) {
                     $this->emDebug("Process child DAG");
                     $childProject = new \Project($child_pid);
                     //get first event in case child event name is not  defined.
