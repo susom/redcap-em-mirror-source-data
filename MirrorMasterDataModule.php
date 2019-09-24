@@ -269,6 +269,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
          * let check if parent record is in a DAG, if so lets find the corresponding Child DAG and update the data accordingly
          */
         if ($config['master-child-dags'] != '' && strpos($record_id, '-') !== false) {
+            $this->emDebug("prepare child DAG");
             $this->getChildDAG($config['master-child-dags'], $config['child-project-id']);
             $parentData = $this->prepareChildDagData($parentData, $pk_field);
             if ($config['master-child-dags'] != '' && !$this->isUserInDAG($config['child-project-id'], USERID,
@@ -373,7 +374,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                  * let check if parent record is in a DAG, if so lets find the corresponding Child DAG and update the data accordingly
                  */
                 if ($config['master-child-dags'] != '') {
-
+                    $this->emDebug("Process child DAG");
                     $childProject = new \Project($child_pid);
                     //get first event in case child event name is not  defined.
                     if ($child_event_name == "" || $child_event_name == null) {
@@ -388,22 +389,22 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                     $value = $this->getDagId();
                     $fieldName = '__GROUPID__';
                     $this->query("DELETE FROM redcap_data where project_id = $child_pid and event_id = $event_id and record = '$record' and field_name = '$fieldName'");
-
+                    $this->emDebug("Insert DAG info");
                     $this->query("INSERT INTO redcap_data (project_id, event_id, record, field_name, value) VALUES ($child_pid, $event_id, '$record', '$fieldName', '$value')");
-
+                    $this->emDebug("Complete Insert DAG info");
                     $arm = getArm();
-
+                    $this->emDebug("Find Sort info");
                     $result = $this->query("SELECT MAX(sort) as max_sort FROM redcap_record_list where project_id = $child_pid and arm = $arm and record = '$record' and dag_id = '$value'");
-
+                    $this->emDebug("Complete Find Sort info");
                     $max = $result->fetch_assoc()['max_sort'] + 1;
                     if ($max == null) {
                         $max = 1;
                     }
-                    $xxx = "INSERT INTO redcap_record_list (project_id, arm, record, dag_id, sort) VALUES ($child_pid, $arm, '$record', '$value', '$max')";
+
                     $this->query("DELETE FROM redcap_record_list WHERE project_id = $child_pid and arm = $arm and record = '$record'");
-
+                    $this->emDebug("Insert record list id");
                     $this->query("INSERT INTO redcap_record_list (project_id, arm, record, dag_id, sort) VALUES ($child_pid, $arm, '$record', '$value', '$max')");
-
+                    $this->emDebug("Complete Insert record list id");
                     //
                     //$this->setDAG(array_pop($result['ids']), $this->getDagId(), $child_pid, $event_id);
                 }
@@ -461,6 +462,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      */
     private function getNextRecordDAGID($dagId)
     {
+        $this->emDebug("find next record id");
         $sql = "SELECT MAX(record) as record_id FROM redcap_data WHERE field_name = '__GROUPID__' AND `value` = $dagId";
         $q = db_query($sql);
 
