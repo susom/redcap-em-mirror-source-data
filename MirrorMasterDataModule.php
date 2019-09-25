@@ -465,7 +465,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                     if ($max == null) {
                         $max = 1;
                     }
-                    $xxx = "INSERT INTO redcap_record_list (project_id, arm, record, dag_id, sort) VALUES ($child_pid, $arm, '$record', '$value', '$max')";
+
                     $this->query("DELETE FROM redcap_record_list WHERE project_id = $child_pid and arm = $arm and record = '$record'");
 
                     $this->query("INSERT INTO redcap_record_list (project_id, arm, record, dag_id, sort) VALUES ($child_pid, $arm, '$record', '$value', '$max')");
@@ -497,6 +497,19 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         $this->updateNoteInParent($record_id, $pk_field, $config, $msg, $parent_data);
 
         return true;
+    }
+
+    private function getProjectDAGName($projectId, $id)
+    {
+        $sql = "SELECT group_name FROM redcap_data_access_groups WHERE project_id = '$projectId' AND group_id = '$id'";
+        $q = db_query($sql);
+
+        if (db_num_rows($q) > 0) {
+            $row = db_fetch_assoc($q);
+            return $row['group_name'];
+        } else {
+            return false;
+        }
     }
 
     private function getProjectDAGID($projectId, $name)
@@ -561,12 +574,6 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
     // Get the record id for the child
     function getChildRecordId($record_id, $config, $child_pid)
     {
-        /**
-         * in case we are adding to DAG just keep whatever we already retrieved
-         */
-        if ($this->getDagRecordId() != null) {
-            return $this->getDagRecordId();
-        }
         $child_id = null;
 
         // Method for creating the child id (child-id-create-new, child-id-like-parent, child-id-parent-specified)
@@ -601,9 +608,38 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                 $child_id_prefix = $config['child-id-prefix'];
                 $child_id_padding = $config['child-id-padding'];
 
-                $event_id = self::getEventIdFromName($child_pid, $config['child-event-name']);
-                //get next id from child project
-                $child_id = $this->getNextID($child_pid, $event_id, $child_id_prefix, $child_id_padding);
+                /**
+                 * in case we are adding to DAG just keep whatever we already retrieved
+                 */
+                if ($this->getDagRecordId() != null) {
+                    $child_id = $this->getDagRecordId();
+                    // Make a padded number
+                    if ($child_id_padding) {
+                        // make sure we haven't exceeded padding, pad of 2 means
+                        //$max = 10^$padding;
+                        $max = 10 ** $child_id_padding;
+                        if ($child_id >= $max) {
+                            $this->emLog("Error - $child_id exceeds max of $max permitted by padding of $child_id_padding characters");
+                            return false;
+                        }
+                        $child_id = str_pad($child_id, $child_id_padding, "0", STR_PAD_LEFT);
+                        //$this->emLog("Padded to $padding for $i is $id");
+                    }
+                    //does prefix is wrapped with square brackets ? if so build the custom prefix.
+                    preg_match("/\[.*?\]/", $child_id_prefix, $matches);
+                    if (!empty($matches)) {
+                        $string = $matches[0];
+                        $string = str_replace(array('[', ']'), '', $string);
+                        $parts = explode(":", $string);
+                        $child_id_prefix = $this->buildCustomPrefix($parts[0], end($parts), $child_pid,
+                            $this->getDagId());
+                    }
+                    $child_id = $child_id_prefix . $child_id;
+                } else {
+                    $event_id = self::getEventIdFromName($child_pid, $config['child-event-name']);
+                    //get next id from child project
+                    $child_id = $this->getNextID($child_pid, $event_id, $child_id_prefix, $child_id_padding);
+                }
                 break;
             default:
                 $event_id = self::getEventIdFromName($child_pid, $config['child-event-name']);
@@ -612,6 +648,32 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         return $child_id;
     }
 
+    /**
+     * build prefix using admin definition currently it has only DAG but its will be easy to add more cases :)
+     * @param $type
+     * @param $field
+     * @param $projectId
+     * @param $value
+     * @return bool
+     */
+    private function buildCustomPrefix($type, $field, $projectId, $value)
+    {
+        switch (strtolower($type)) {
+            case 'dag':
+                switch (strtolower($field)) {
+                    case 'name':
+                        return $this->getProjectDAGName($projectId, $value);
+                        break;
+                    case 'id':
+                        return $value;
+                        break;
+                }
+                break;
+            default:
+                return $value;
+                break;
+        }
+    }
 
     function getIntersectFields(
         $child_pid,

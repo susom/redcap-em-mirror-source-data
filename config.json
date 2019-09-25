@@ -1,238 +1,254 @@
 {
-	"name": "Mirror Master Data",
-
-	"namespace":"Stanford\\MirrorMasterDataModule",
-
-	"description": "Module migrates the intersect of fields found in parent and child project",
-
-	"versions": [
-		{ "0.1 ": "Initial Development Version" }
-	],
-
-	"authors": [
-		{
-			"name": "Andy Martin",
-			"email": "andy123@stanford.edu",
-			"institution": "Stanford University"
-		},
-		{
-			"name": "Jae Lee",
-			"email": "jael@stanford.edu",
-			"institution": "Stanford University"
-		}
-	],
-
-	"permissions": [
-		"hook_save_record",
-		"hook_control_center",
-		"select_data",
-		"update_data",
-		"delete_data"
-	],
-
-	"links": {
-		"control-center": [
-		],
-		"project": [
-		]
-	},
-
-    "system-settings": [
-    	{
-      		"key": "enable-system-debug-logging",
-      		"name": "<b>Enable Debug Logging (system-wide)</b><i>(Requires emLogger)</i>",
-      		"required": false,
-      		"type": "checkbox"
-    	}
-  	],
-	"project-settings": [
-		{
-			"key": "instructions",
-			"name": "<h5>Instructions</h5><p>This rather complex module copies data from a <span class='text-lg badge badge-lg badge-success'>source project</span> to a <span class='text-lg badge badge-lg badge-danger'>child project</span> in response to a logical condition.  The child project could be in another arm of the main project or an entirely different REDCap project.</p><p>A common use of this module is to take screening data in one project and migrate to an official study project after vetting for eligibility and/or consent.</p><p>You can set up multiple migrations from a single master project (such as having many sub-studies off of a master participant list)</p>",
-			"type": "descriptive"
-		},
-		{
-			"key": "child-projects",
-			"name": "List of Child Projects to receive Mirrored Data",
-			"required": true,
-			"type": "sub_settings",
-			"repeatable":true,
-			"sub_settings":[
-				{
-					"key": "master-event-name",
-					"name": "<h6><span class='text-lg badge badge-lg badge-success'>MASTER EVENT</span></h6>If longitudinal, enter the event where source data resides.<br>All data must be in one event, including the triggering form",
-					"required": false,
-					"type": "event-list"
-				},
-				{
-					"key": "mirror-logic",
-					"name": "<h6><span class='text-lg badge badge-lg badge-success'>TRIGGER LOGIC</span></h6>Only clone from MASTER if this logical expression is true (leave blank to always clone)",
-					"required": false,
-					"type": "textarea"
-				},
-				{
-					"key": "trigger-form",
-					"name": "<h6><span class='text-lg badge badge-lg badge-success'>TRIGGERING FORM</span></h6>The logic above will only be evaluated when this form is saved.  If left blank, logic is applied after all saves (less efficient)",
-					"required": false,
-					"type": "form-list"
-				},
-				{
-                  "key": "master-child-dags",
-                  "name": "<h6><span class='text-lg badge badge-lg badge-success'>Master-Child DAGs</span></h6>Add Json that contains the name of master and child DAGs in following format<pre>{\n\"master\" : [MASTER_DAG_NAME],\n\"child\": [CHILD_DAG_NAME]\n}</pre>",
-                  "required": false,
-                  "type": "textarea"
-                },
-              {
-					"key": "child-project-id",
-					"name": "<h6><span class='text-lg badge badge-lg badge-danger'>SELECT CHILD PROJECT</span></h6>You must have access to the project to select it below",
-					"required": true,
-					"type": "project-id"
-				},
-				{
-					"key": "child-event-name",
-					"name": "<h6><span class='text-lg badge badge-lg badge-danger'>CHILD EVENT NAME</span></h6>If child project is classical, leave blank, otherwise specify child event where data will go. <i>(e.g. event_1_arm_1)</i>",
-					"required": false,
-					"type": "text"
-				},
-				{
-					"key": "fields-to-migrate",
-					"name": "<h6><span class='text-lg badge badge-lg badge-secondary'>SELECT FIELD COPY OPTIONS</span></h6>Fields in both the <span class='text-lg badge badge-lg badge-success'>parent project</span> and the <span class='text-lg badge badge-lg badge-danger'>target project</span> have to have the same fieldnames (and same choices if radio/dropdown/checkbox)",
-					"required": true,
-					"type": "dropdown",
-					"choices":[
-						{
-							"name" : "Migrate all common fieldnames",
-							"value" : "migrate-intersect"
-						},
-						{
-							"name" : "Migrate a specified list of fieldnames",
-							"value" : "migrate-intersect-specified"
-						},
-						{
-							"name" : "Migrate only specified TARGET form",
-							"value" : "migrate-child-form"
-						},
-						{
-							"name" : "Migrate only specified PARENT form",
-							"value" : "migrate-parent-form"
-						}
-					]
-				},
-				{
-					"key": "include-only-fields",
-					"name": "<h6><span class='text-lg badge badge-lg badge-secondary'>INCLUDED FIELD LIST</span></h6>List of fields to include - must be present in both projects.",
-					"required": false,
-					"type": "field-list",
-					"repeatable":true,
-					"branchingLogic": {
-						"field": "fields-to-migrate",
-						"value": "migrate-intersect-specified"
-					}
-				},
-				{
-					"key": "include-only-form-child",
-					"name": "<h6><span class='text-lg badge badge-lg badge-danger'>CHILD FORM ONLY</span></h6>Migrate only the fields on this form.",
-					"required": false,
-					"type": "text",
-					"repeatable":false,
-					"branchingLogic": {
-						"field": "fields-to-migrate",
-						"value": "migrate-child-form"
-					}
-				},
-				{
-					"key": "include-only-form-parent",
-					"name": "<h6><span class='text-lg badge badge-lg badge-success'>PARENT FORM ONLY</span></h6>Migrate only fields from this PARENT form.",
-					"required": false,
-					"type": "form-list",
-					"repeatable":false,
-					"branchingLogic": {
-						"field": "fields-to-migrate",
-						"value": "migrate-parent-form"
-					}
-				},
-				{
-					"key": "exclude-fields",
-					"name": "<h6><span class='text-lg badge badge-lg badge-secondary'>EXCLUDED FIELD LIST</span></h6>Remove these fields from the list generated above so they are not copied to the child project",
-					"required": false,
-					"type": "field-list",
-					"repeatable":true
-				},
-				{
-					"key": "child-id-select",
-					"name": "<h6><span class='text-lg badge badge-lg badge-danger'>CHILD RECORD NAMING OPTIONS</span></h6>Select how to determine the child project record id.",
-					"required": true,
-					"type": "radio",
-					"choices":[
-						{
-							"name" : "<div><span class='text-lg badge badge-lg badge-primary'>1. AUTO-INCREMENT CHILD ID</span></div>",
-							"value" : "child-id-create-new"
-						},
-						{
-							"name" : "<div><span class='text-lg badge badge-lg badge-info'>2. USE SAME ID as PARENT</span></div>",
-							"value" : "child-id-like-parent"
-						},
-						{
-							"name" : "<div><span class='text-lg badge badge-lg badge-warning'>3. USE FIELD VALUE FROM PARENT</span></div>",
-							"value" :  "child-id-parent-specified"
-						}
-					]
-				},
-				{
-					"key": "child-id-prefix",
-					"name": "<span class='text-lg badge badge-lg badge-primary'>1. AUTO-INCREMENT CHILD ID OPTION</span><br><b>Add PREFIX to new CHILD ID</b><br>(e.g. STAN-).  Leave blank for no prefix",
-					"required": false,
-					"type": "text"
-				},
-				{
-					"key": "child-id-padding",
-					"name": "<span class='text-lg badge badge-lg badge-primary'>1. AUTO-INCREMENT CHILD ID OPTION</span><br><b>Pad the new CHILD ID</b><br>If specified, it will pad the numerical portion of the record ID to the specified number of digits.  For example, a padding of '4' will result in an id:STAN-0004 with a prefix of STAN-",
-					"required": false,
-					"type": "text"
-				},
-				{
-					"key": "child-id-parent-specified-field",
-					"name": "<span class='text-lg badge badge-lg badge-warning'>3. USE FIELD VALUE FROM PARENT OPTION</span><br>Specify field in parent project to use as child record ID.<br>Use this option if you need to manually specify your child record ID.<br>If this field has no value in the source record, there will be no migration.<br>If two records share the same value or <b>Clobber existing data</b> is used, you could overwrite the child data",
-					"required": false,
-					"type": "field-list"
-				},
-				{
-					"key": "parent-field-for-child-id",
-					"name": "<h6><span class='text-lg badge badge-lg badge-success'>LOG CHILD RECORD ID IN PARENT FIELD</span></h6>If specified, the child's ID will be saved in this parent field",
-					"required": false,
-					"type": "field-list"
-				},
-				{
-					"key": "child-field-for-parent-id",
-					"name": "<h6><span class='text-lg badge badge-lg badge-danger'>LOG PARENT RECORD ID IN CHILD PROJECT</span></h6>If specified, the parent record's ID will be saved in this child field",
-					"required": false,
-					"type": "text"
-				},
-				{
-					"key": "child-field-clobber",
-					"name": "<h6><span class='text-lg badge badge-lg badge-secondary'>REDO/CLOBBER MIGRATION</span></h6>If checked, migration will be repeated on <b>each parent save</b>.<br><br>This can result in multiple records being created if New ID creation is set or existing data in the child project to be overwritten if TARGET ID is reused.",
-					"required": false,
-					"type": "checkbox"
-				},
-				{
-					"key": "migration-timestamp",
-					"name": "<h6><span class='text-lg badge badge-lg badge-success'>MIGRATION TIMESTAMP FIELD</span></h6>This required field in the parent project stores the timestamp when migration was completed.<br><u>Migration only takes place when this field is empty unless <b>Clobber existing data</b> is checked.</u>",
-					"required": true,
-					"type": "field-list"
-				},
-				{
-					"key": "migration-notes",
-					"name": "<h6><span class='text-lg badge badge-lg badge-success'>MIGRATION NOTES</span></h6>(optional) Upon completion of migration, notes will be logged in this parent field.",
-					"required": false,
-					"type": "field-list"
-				}
-			]
-		},
-		{
-			"key": "enable-project-debug-logging",
-			"name": "<b>Enable Debug Logging</b>",
-			"required": false,
-			"type": "checkbox"
-		}
-	]
+  "name": "Mirror Master Data",
+  "namespace": "Stanford\\MirrorMasterDataModule",
+  "description": "Module migrates the intersect of fields found in parent and child project",
+  "versions": [
+    {
+      "0.1 ": "Initial Development Version"
+    }
+  ],
+  "authors": [
+    {
+      "name": "Andy Martin",
+      "email": "andy123@stanford.edu",
+      "institution": "Stanford University"
+    },
+    {
+      "name": "Jae Lee",
+      "email": "jael@stanford.edu",
+      "institution": "Stanford University"
+    }
+  ],
+  "permissions": [
+    "hook_save_record",
+    "hook_control_center",
+    "select_data",
+    "update_data",
+    "delete_data"
+  ],
+  "links": {
+    "control-center": [
+    ],
+    "project": [
+    ]
+  },
+  "system-settings": [
+    {
+      "key": "enable-system-debug-logging",
+      "name": "<b>Enable Debug Logging (system-wide)</b><i>(Requires emLogger)</i>",
+      "required": false,
+      "type": "checkbox"
+    }
+  ],
+  "project-settings": [
+    {
+      "key": "instructions",
+      "name": "<h5>Instructions</h5><p>This rather complex module copies data from a <span class='text-lg badge badge-lg badge-success'>source project</span> to a <span class='text-lg badge badge-lg badge-danger'>child project</span> in response to a logical condition.  The child project could be in another arm of the main project or an entirely different REDCap project.</p><p>A common use of this module is to take screening data in one project and migrate to an official study project after vetting for eligibility and/or consent.</p><p>You can set up multiple migrations from a single master project (such as having many sub-studies off of a master participant list)</p>",
+      "type": "descriptive"
+    },
+    {
+      "key": "child-projects",
+      "name": "List of Child Projects to receive Mirrored Data",
+      "required": true,
+      "type": "sub_settings",
+      "repeatable": true,
+      "sub_settings": [
+        {
+          "key": "master-event-name",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>MASTER EVENT</span></h6>If longitudinal, enter the event where source data resides.<br>All data must be in one event, including the triggering form",
+          "required": false,
+          "type": "event-list"
+        },
+        {
+          "key": "mirror-logic",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>TRIGGER LOGIC</span></h6>Only clone from MASTER if this logical expression is true (leave blank to always clone)",
+          "required": false,
+          "type": "textarea"
+        },
+        {
+          "key": "trigger-form",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>TRIGGERING FORM</span></h6>The logic above will only be evaluated when this form is saved.  If left blank, logic is applied after all saves (less efficient)",
+          "required": false,
+          "type": "form-list"
+        },
+        {
+          "key": "same-dags-name",
+          "name": "<b>Check this option if the mapped DAGs names are the same between Master and Child projects.</b>",
+          "required": false,
+          "type": "checkbox"
+        },
+        {
+          "key": "master-child-dag-map",
+          "name": "If DAGs names are different between master and child projects please specify the DAGs name",
+          "required": true,
+          "type": "sub_settings",
+          "repeatable": true,
+          "sub_settings": [
+            {
+              "key": "master-dag",
+              "name": "Select Master DAG",
+              "required": false,
+              "type": "dag-list"
+            },
+            {
+              "key": "child-dag",
+              "name": "Type Child DAG",
+              "required": false,
+              "type": "text"
+            }
+          ]
+        },
+        {
+          "key": "child-project-id",
+          "name": "<h6><span class='text-lg badge badge-lg badge-danger'>SELECT CHILD PROJECT</span></h6>You must have access to the project to select it below",
+          "required": true,
+          "type": "project-id"
+        },
+        {
+          "key": "child-event-name",
+          "name": "<h6><span class='text-lg badge badge-lg badge-danger'>CHILD EVENT NAME</span></h6>If child project is classical, leave blank, otherwise specify child event where data will go. <i>(e.g. event_1_arm_1)</i>",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "key": "fields-to-migrate",
+          "name": "<h6><span class='text-lg badge badge-lg badge-secondary'>SELECT FIELD COPY OPTIONS</span></h6>Fields in both the <span class='text-lg badge badge-lg badge-success'>parent project</span> and the <span class='text-lg badge badge-lg badge-danger'>target project</span> have to have the same fieldnames (and same choices if radio/dropdown/checkbox)",
+          "required": true,
+          "type": "dropdown",
+          "choices": [
+            {
+              "name": "Migrate all common fieldnames",
+              "value": "migrate-intersect"
+            },
+            {
+              "name": "Migrate a specified list of fieldnames",
+              "value": "migrate-intersect-specified"
+            },
+            {
+              "name": "Migrate only specified TARGET form",
+              "value": "migrate-child-form"
+            },
+            {
+              "name": "Migrate only specified PARENT form",
+              "value": "migrate-parent-form"
+            }
+          ]
+        },
+        {
+          "key": "include-only-fields",
+          "name": "<h6><span class='text-lg badge badge-lg badge-secondary'>INCLUDED FIELD LIST</span></h6>List of fields to include - must be present in both projects.",
+          "required": false,
+          "type": "field-list",
+          "repeatable": true,
+          "branchingLogic": {
+            "field": "fields-to-migrate",
+            "value": "migrate-intersect-specified"
+          }
+        },
+        {
+          "key": "include-only-form-child",
+          "name": "<h6><span class='text-lg badge badge-lg badge-danger'>CHILD FORM ONLY</span></h6>Migrate only the fields on this form.",
+          "required": false,
+          "type": "text",
+          "repeatable": false,
+          "branchingLogic": {
+            "field": "fields-to-migrate",
+            "value": "migrate-child-form"
+          }
+        },
+        {
+          "key": "include-only-form-parent",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>PARENT FORM ONLY</span></h6>Migrate only fields from this PARENT form.",
+          "required": false,
+          "type": "form-list",
+          "repeatable": false,
+          "branchingLogic": {
+            "field": "fields-to-migrate",
+            "value": "migrate-parent-form"
+          }
+        },
+        {
+          "key": "exclude-fields",
+          "name": "<h6><span class='text-lg badge badge-lg badge-secondary'>EXCLUDED FIELD LIST</span></h6>Remove these fields from the list generated above so they are not copied to the child project",
+          "required": false,
+          "type": "field-list",
+          "repeatable": true
+        },
+        {
+          "key": "child-id-select",
+          "name": "<h6><span class='text-lg badge badge-lg badge-danger'>CHILD RECORD NAMING OPTIONS</span></h6>Select how to determine the child project record id.",
+          "required": true,
+          "type": "radio",
+          "choices": [
+            {
+              "name": "<div><span class='text-lg badge badge-lg badge-primary'>1. AUTO-INCREMENT CHILD ID</span></div>",
+              "value": "child-id-create-new"
+            },
+            {
+              "name": "<div><span class='text-lg badge badge-lg badge-info'>2. USE SAME ID as PARENT</span></div>",
+              "value": "child-id-like-parent"
+            },
+            {
+              "name": "<div><span class='text-lg badge badge-lg badge-warning'>3. USE FIELD VALUE FROM PARENT</span></div>",
+              "value": "child-id-parent-specified"
+            }
+          ]
+        },
+        {
+          "key": "child-id-prefix",
+          "name": "<span class='text-lg badge badge-lg badge-primary'>1. AUTO-INCREMENT CHILD ID OPTION</span><br><b>Add PREFIX to new CHILD ID</b><br>You can use specific words (e.g. STAN-). Or you can define smart variable currently it only supports DAG (e.g. [DAG:NAME]-).  Leave blank for no prefix",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "key": "child-id-padding",
+          "name": "<span class='text-lg badge badge-lg badge-primary'>1. AUTO-INCREMENT CHILD ID OPTION</span><br><b>Pad the new CHILD ID</b><br>If specified, it will pad the numerical portion of the record ID to the specified number of digits.  For example, a padding of '4' will result in an id:STAN-0004 with a prefix of STAN-",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "key": "child-id-parent-specified-field",
+          "name": "<span class='text-lg badge badge-lg badge-warning'>3. USE FIELD VALUE FROM PARENT OPTION</span><br>Specify field in parent project to use as child record ID.<br>Use this option if you need to manually specify your child record ID.<br>If this field has no value in the source record, there will be no migration.<br>If two records share the same value or <b>Clobber existing data</b> is used, you could overwrite the child data",
+          "required": false,
+          "type": "field-list"
+        },
+        {
+          "key": "parent-field-for-child-id",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>LOG CHILD RECORD ID IN PARENT FIELD</span></h6>If specified, the child's ID will be saved in this parent field",
+          "required": false,
+          "type": "field-list"
+        },
+        {
+          "key": "child-field-for-parent-id",
+          "name": "<h6><span class='text-lg badge badge-lg badge-danger'>LOG PARENT RECORD ID IN CHILD PROJECT</span></h6>If specified, the parent record's ID will be saved in this child field",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "key": "child-field-clobber",
+          "name": "<h6><span class='text-lg badge badge-lg badge-secondary'>REDO/CLOBBER MIGRATION</span></h6>If checked, migration will be repeated on <b>each parent save</b>.<br><br>This can result in multiple records being created if New ID creation is set or existing data in the child project to be overwritten if TARGET ID is reused.",
+          "required": false,
+          "type": "checkbox"
+        },
+        {
+          "key": "migration-timestamp",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>MIGRATION TIMESTAMP FIELD</span></h6>This required field in the parent project stores the timestamp when migration was completed.<br><u>Migration only takes place when this field is empty unless <b>Clobber existing data</b> is checked.</u>",
+          "required": true,
+          "type": "field-list"
+        },
+        {
+          "key": "migration-notes",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>MIGRATION NOTES</span></h6>(optional) Upon completion of migration, notes will be logged in this parent field.",
+          "required": false,
+          "type": "field-list"
+        }
+      ]
+    },
+    {
+      "key": "enable-project-debug-logging",
+      "name": "<b>Enable Debug Logging</b>",
+      "required": false,
+      "type": "checkbox"
+    }
+  ]
 }
