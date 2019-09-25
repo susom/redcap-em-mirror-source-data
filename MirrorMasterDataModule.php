@@ -158,7 +158,9 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                 }
             }
 
-
+            /**
+             * in case we have DAGs loop over all of them and insert only the one user belongs to.
+             */
             if (!empty($dags)) {
                 foreach ($dags as $dag) {
                     $config['master-child-dags'] = json_encode($dag);
@@ -173,6 +175,11 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         }
     }
 
+    /**
+     * @param $dags
+     * @param $name
+     * @return int|string|null
+     */
     private function searchForDAGIndex($dags, $name)
     {
         foreach ($dags as $key => $dag) {
@@ -182,6 +189,13 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         }
         return null;
     }
+
+    /**
+     * @param $projecId
+     * @param $username
+     * @param $group_id
+     * @return bool
+     */
     private function isUserInDAG($projecId, $username, $group_id)
     {
         $sql = "SELECT username FROM redcap_user_rights WHERE username = '$username' AND group_id = $group_id AND project_id = $projecId";
