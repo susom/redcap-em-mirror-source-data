@@ -130,19 +130,20 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                     $masterDags = $this->getProjectDags($project_id);
                     while ($row = db_fetch_assoc($masterDags)) {
                         $childDag = $this->getProjectDags($config['child-project-id'], $row['group_name']);
-                        if ($childDag) {
-                            $childRow = db_fetch_assoc($childDag);
-                            $dags[] = array("master" => $row['group_id'], "child" => $childRow['group_id']);
-                            $config['master-child-dags'] = json_encode($dags);
-                        } else {
+                        if (!$childDag) {
                             //in case no match let check if dags map is manually defined
                             $childDagIndex = $this->searchForDAGIndex($mappedMasterDags[$key], $row['group_id']);
                             if (!is_null($childDagIndex)) {
-                                $dags[] = array("master" => $row['group_id'],
+                                $dags[] = array(
+                                    "master" => $row['group_id'],
                                     "child" => $this->getProjectDAGID($config['child-project-id'],
                                         $mappedChildrenDags[$key][$childDagIndex])
                                 );
                             }
+                        } else {
+                            $childRow = db_fetch_assoc($childDag);
+                            $dags[] = array("master" => $row['group_id'], "child" => $childRow['group_id']);
+                            $config['master-child-dags'] = json_encode($dags);
                         }
                     }
                 } else {

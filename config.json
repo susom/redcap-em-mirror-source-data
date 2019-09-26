@@ -72,33 +72,6 @@
           "type": "form-list"
         },
         {
-          "key": "same-dags-name",
-          "name": "<b>Check this option if the mapped DAGs names are the same between Master and Child projects.</b>",
-          "required": false,
-          "type": "checkbox"
-        },
-        {
-          "key": "master-child-dag-map",
-          "name": "If DAGs names are different between master and child projects please specify the DAGs name",
-          "required": true,
-          "type": "sub_settings",
-          "repeatable": true,
-          "sub_settings": [
-            {
-              "key": "master-dag",
-              "name": "Select Master DAG",
-              "required": false,
-              "type": "dag-list"
-            },
-            {
-              "key": "child-dag",
-              "name": "Type Child DAG",
-              "required": false,
-              "type": "text"
-            }
-          ]
-        },
-        {
           "key": "child-project-id",
           "name": "<h6><span class='text-lg badge badge-lg badge-danger'>SELECT CHILD PROJECT</span></h6>You must have access to the project to select it below",
           "required": true,
@@ -131,6 +104,38 @@
             {
               "name": "Migrate only specified PARENT form",
               "value": "migrate-parent-form"
+            }
+          ]
+        },
+        {
+          "key": "dag_configuration",
+          "name": "<h6><span class='text-lg badge badge-lg badge-secondary'>DAG Configuration</span></h6>",
+          "type": "descriptive"
+        },
+        {
+          "key": "same-dags-name",
+          "name": "<b>Check this option if DAGs names are the same between Master and Child projects.</b>",
+          "required": false,
+          "type": "checkbox"
+        },
+        {
+          "key": "master-child-dag-map",
+          "name": "If DAGs names are different between master and child projects please specify the DAGs name",
+          "required": true,
+          "type": "sub_settings",
+          "repeatable": true,
+          "sub_settings": [
+            {
+              "key": "master-dag",
+              "name": "Select Master DAG",
+              "required": false,
+              "type": "dag-list"
+            },
+            {
+              "key": "child-dag",
+              "name": "Type Child DAG",
+              "required": false,
+              "type": "text"
             }
           ]
         },
