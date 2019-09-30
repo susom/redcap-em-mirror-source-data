@@ -140,7 +140,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                         } else {
                             //search if master dag name match dag name in child project.
                             $childDag = $this->getProjectDags($config['child-project-id'], $row['group_name']);
-                            if (!$childDag) {
+                            if ($childDag) {
                                 $childRow = db_fetch_assoc($childDag);
                                 $dags[] = array("master" => $row['group_id'], "child" => $childRow['group_id']);
                                 $config['master-child-dags'] = json_encode($dags);
@@ -649,8 +649,9 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                         $string = $matches[0];
                         $string = str_replace(array('[', ']'), '', $string);
                         $parts = explode(":", $string);
-                        $child_id_prefix = $this->buildCustomPrefix($parts[0], end($parts), $child_pid,
+                        $r = $this->buildCustomPrefix($parts[0], end($parts), $child_pid,
                             $this->getDagId());
+                        $child_id_prefix = str_replace($matches[0], $r, $child_id_prefix);
                     }
                     $child_id = $child_id_prefix . $child_id;
                 } else {
