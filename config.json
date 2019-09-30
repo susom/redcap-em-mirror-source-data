@@ -201,7 +201,7 @@
         },
         {
           "key": "child-id-prefix",
-          "name": "<span class='text-lg badge badge-lg badge-primary'>1. AUTO-INCREMENT CHILD ID OPTION</span><br><b>Add PREFIX to new CHILD ID</b><br>You can use specific words (e.g. STAN-). Or you can define smart variable currently it only supports DAG (e.g. [DAG:NAME]-).  Leave blank for no prefix",
+          "name": "<span class='text-lg badge badge-lg badge-primary'>1. AUTO-INCREMENT CHILD ID OPTION</span><br><b>Add PREFIX to new CHILD ID</b><br>You can use specific words (e.g. STAN-). Or you can append DAG name or ID (e.g. [DAG:NAME]-, [DAG:ID]-).  Leave blank for no prefix",
           "required": false,
           "type": "text"
         },
