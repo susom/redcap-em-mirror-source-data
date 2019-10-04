@@ -329,6 +329,7 @@ class Child
     }
 
     /**
+     * check if child record already saved before
      * @return bool
      */
     public function isRecordIdExist()
@@ -342,6 +343,10 @@ class Child
         return false;
     }
 
+    /**
+     * get child arm for current event
+     * @return bool|int
+     */
     public function getArm()
     {
         $arm = db_result(db_query("select arm_num from redcap_events_arms a, redcap_events_metadata e where a.arm_id = e.arm_id and e.event_id = " . $this->getEventId()),

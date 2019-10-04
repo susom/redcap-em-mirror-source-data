@@ -453,8 +453,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             //
             // //UPDATE PARENT LOG
             // This was to-do added by Andy so I added it to update master record that migration did not happened because it already done before.
-            $this->updateNoteInParent($this->getMaster()->getRecordId(), $this->getMaster()->getPrimaryKey(), $config,
-                $existing_msg, $log_data);
+            $this->getMaster()->updateNotes($config, $existing_msg, $log_data);
 
             return false;
         }
@@ -505,19 +504,14 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         }
 
         //7. UPDATE PARENT Note
-        $this->updateNoteInParent($this->getMaster()->getRecordId(), $this->getMaster()->getPrimaryKey(), $config, $msg,
-            $master);
-
+        $this->getMaster()->updateNotes($config, $msg, $master);
     }
 
     /**
-     * Migrate data for child project specified in $config parameter
-     * @param $config
-     * @return bool
+     * @param array $config
      */
-    private function mirrorData($config)
+    private function initiateChildProject($config)
     {
-
         //set child id and project object if child not defined or child-project-id is different from current child-project-id
         if (!$this->getChild() || $this->getChild()->getProjectId() != $config['child-project-id']) {
             /**
@@ -531,6 +525,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                 $this->getChild()->setConfig($config);
             }
         } else {
+            //if this child object is used more than once time then prevent updating record id to save all information for same record in different events
             $this->getChild()->setChangeRecordId(false);
         }
 
@@ -543,13 +538,21 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             $this->getChild()->setEventId($this->getChild()->getProject()->getEventIdUsingUniqueEventName($config['child-event-name']));
         }
 
-        //$child_pid = ;
-
 
         /**
          * set flag to be used later in the execution.
          */
         $this->getChild()->setFieldClobber($config['child-field-clobber']);
+    }
+    /**
+     * Migrate data for child project specified in $config parameter
+     * @param $config
+     * @return bool
+     */
+    private function mirrorData($config)
+    {
+        //set child object with other required parameters
+        $this->initiateChildProject($config);
 
         //0. CHECK if in right EVENT (only applies if master-event-name is not null)
         $this->setTriggerEvent($config['master-event-name']);
@@ -601,8 +604,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             $log_data = array();
             $log_data[$config['parent-field-for-child-id']] = '';
             $log_data[$config['migration-timestamp']] = date('Y-m-d H:i:s');
-            $this->updateNoteInParent($this->getMaster()->getRecordId(), $this->getMaster()->getPrimaryKey(), $config,
-                $msg, $log_data);
+            $this->getMaster()->updateNotes($config, $msg, $log_data);
             return false;
         }
 
@@ -640,7 +642,8 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         //5.5 Determine the ID in the CHILD project.
         $this->getChildRecordId($config);
 
-        if ((!empty($this->getChild()->isRecordIdExist())) && ($this->getChild()->isFieldClobber() != '1')) {
+        //check if child record is already saved
+        if ((!empty($this->getChild()->isRecordIdExist())) && (!$this->getChild()->isFieldClobber())) {
             //Log no migration
             $msg = "Error creating record in TARGET project. ";
             $msg .= "Target ID, " . $this->getChild()->getRecordId() . ", already exists in Child project " . $this->getChild()->getProjectId() . " and clobber is set to false (" . $this->getChild()->isFieldClobber() . ").";
@@ -649,9 +652,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             //$this->emDebug("PROCEED: Target $child_id does not exists (" . count($target_results) . ") in $child_pid or clobber true ($child_field_clobber).");
 
             //5. SET UP CHILD PROJECT TO SAVE DATA
-            //TODO: logging variable needs to be done separately because of events
             //GET logging variables from target project
-            $child_field_for_parent_id = $config['child-field-for-parent-id'];
 
 
             //add additional fields to be added to the SaveData call
@@ -720,6 +721,10 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                         true);
                 $this->emError($msg);
                 $this->emError("CHILD ERROR", $result);
+                $data['migration-notes'] = $msg;
+
+                //update parent notes
+                $this->getMaster()->updateNotes($config, $msg, $data);
             } else {
                 /**
                  * let check if parent record is in a DAG, if so lets find the corresponding Child DAG and update the data accordingly
@@ -752,8 +757,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
                     } catch (\Exception $e) {
                         $msg = $e->getMessage();
-                        $this->updateNoteInParent($this->getMaster()->getRecordId(),
-                            $this->getMaster()->getPrimaryKey(), $config, $msg);
+                        $this->getMaster()->updateNotes($config, $msg);
                         return false;
                     }
                     //
@@ -770,7 +774,6 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                     }
 
                     // REDCap Hook injection point: Pass project_id and record name to method
-                    // TODO - Handle child group ID
                     // \Hooks::call('redcap_save_record', array($child_pid, $child_id, $_GET['page'], $child_event_name, $group_id, null, null, $_GET['instance']));
                     \Hooks::call('redcap_save_record',
                         array(
@@ -1054,51 +1057,6 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         }
 
         $this->setMigrationFields($arr_fields);
-
-    }
-
-    /**
-     * Bubble up status to user via the timestamp and notes field in the parent form
-     * in config file as 'migration-notes'
-     * @param $record_id : record_id of current record
-     * @param $pk_field : the first field in parent project (primary key)
-     * @param $config : config fields for migration module
-     * @param $msg : Message to enter into Notes field
-     * @param $parent_data : If child migration successful, data about migration to child (else leave as null)
-     * @return bool        : return fail/pass status of save data
-     */
-    private function updateNoteInParent($record_id, $pk_field, $config, $msg, $parent_data = array())
-    {
-        //$this->emLog($parent_data, "DEBUG", "RECEIVED THIS DATA");
-        $parent_data[$pk_field] = $record_id;
-        if (isset($config['migration-notes'])) {
-            $parent_data[$config['migration-notes']] = $msg;
-        }
-
-        if (!empty($config['master-event-name'])) {
-            //assuming that current event is the right event
-            //$this->emLog("Event name from REDCap::getEventNames : $master_event / EVENT name from this->redcap_event_name: ".$this->redcap_event_name);
-            $parent_data['redcap_event_name'] = $this->getMaster()->getEventName(); //$config['master-event-name'];
-        }
-
-        //$this->emLog($parent_data, "Saving Parent Data");
-        $result = REDCap::saveData(
-            $this->getMaster()->getProjectId(),
-            'json',
-            json_encode(array($parent_data)),
-            'overwrite');
-
-        // Check for upload errors
-        if (!empty($result['errors'])) {
-            $msg = "Error creating record in PARENT project " . $this->getMaster()->getProjectId() . " - ask administrator to review logs: " . json_encode($result);
-            //$sr->updateFinalReviewNotes($msg);
-            //todo: bubble up to user : should this be sent to logging?
-            $this->emError($msg);
-            $this->emError("RESULT OF PARENT: " . print_r($result, true));
-            //logEvent($description, $changes_made="", $sql="", $record=null, $event_id=null, $project_id=null);
-            REDCap::logEvent("Mirror Master Data Module", $msg, null, $record_id, $config['master-event-name']);
-            return false;
-        }
 
     }
 }

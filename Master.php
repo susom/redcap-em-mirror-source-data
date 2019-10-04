@@ -2,6 +2,8 @@
 
 namespace Stanford\MirrorMasterDataModule;
 
+use REDCap;
+
 /**
  * Class Master
  * @package Stanford\MirrorMasterDataModule
@@ -260,5 +262,49 @@ class Master
         $this->setRecordId($id);
 
         $this->getRecordId();
+    }
+
+    /**
+     * Bubble up status to user via the timestamp and notes field in the parent form
+     * in config file as 'migration-notes'
+     * @param $config : config fields for migration module
+     * @param $msg : Message to enter into Notes field
+     * @param $parent_data : If child migration successful, data about migration to child (else leave as null)
+     * @return bool        : return fail/pass status of save data
+     */
+    public function updateNotes($config, $msg, $parent_data = array())
+    {
+        //$this->emLog($parent_data, "DEBUG", "RECEIVED THIS DATA");
+        $parent_data[$this->getPrimaryKey()] = $this->getRecordId();
+        if (isset($config['migration-notes'])) {
+            $parent_data[$config['migration-notes']] = $msg;
+        }
+
+        if (!empty($config['master-event-name'])) {
+            //assuming that current event is the right event
+            //$this->emLog("Event name from REDCap::getEventNames : $master_event / EVENT name from this->redcap_event_name: ".$this->redcap_event_name);
+            $parent_data['redcap_event_name'] = $this->getEventName(); //$config['master-event-name'];
+        }
+
+        //$this->emLog($parent_data, "Saving Parent Data");
+        $result = REDCap::saveData(
+            $this->getProjectId(),
+            'json',
+            json_encode(array($parent_data)),
+            'overwrite');
+
+        // Check for upload errors
+        if (!empty($result['errors'])) {
+            $msg = "Error creating record in PARENT project " . $this->getProjectId() . " - ask administrator to review logs: " . json_encode($result);
+            //$sr->updateFinalReviewNotes($msg);
+            //todo: bubble up to user : should this be sent to logging?
+            $this->emError($msg);
+            $this->emError("RESULT OF PARENT: " . print_r($result, true));
+            //logEvent($description, $changes_made="", $sql="", $record=null, $event_id=null, $project_id=null);
+            REDCap::logEvent("Mirror Master Data Module", $msg, null, $this->getRecordId(),
+                $config['master-event-name']);
+            return false;
+        }
+
     }
 }
