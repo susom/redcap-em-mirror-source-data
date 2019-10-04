@@ -40,24 +40,54 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
     use emLoggerTrait;
 
     // PARENT INFO
+    /**
+     * @var Master
+     */
     private $master;
 
+    /**
+     * @var Child
+     */
     private $child;
 
+    /**
+     * @var array
+     */
     private $masterDAGs;
 
+    /**
+     * @var array
+     */
     private $childrenDAGs;
 
+    /**
+     * @var array
+     */
     private $dagMaps;
 
+    /**
+     * @var string
+     */
     private $triggerEvent;
 
+    /**
+     * @var string
+     */
     private $triggerInstrument;
 
+    /**
+     * @var array
+     */
     private $migrationFields;
 
+    /**
+     * @var string
+     */
     private $dagId;
 
+    /**
+     * @var string
+     */
     private $dagRecordId;
 
     /**
@@ -282,7 +312,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      * @param null $response_id
      * @param int $repeat_instance
      */
-    function hook_save_record(
+    public function hook_save_record(
         $project_id,
         $record,
         $instrument,
@@ -485,7 +515,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      * @param $config
      * @return bool
      */
-    function mirrorData($config)
+    private function mirrorData($config)
     {
 
         //set child id and project object if child not defined or child-project-id is different from current child-project-id
@@ -757,6 +787,12 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         return true;
     }
 
+    /**
+     * get dag name using its id
+     * @param $projectId
+     * @param $id
+     * @return bool
+     */
     private function getProjectDAGName($projectId, $id)
     {
         $sql = "SELECT group_name FROM redcap_data_access_groups WHERE project_id = '$projectId' AND group_id = '$id'";
@@ -770,6 +806,12 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         }
     }
 
+    /**
+     * get dag id using its name
+     * @param $projectId
+     * @param $name
+     * @return bool
+     */
     private function getProjectDAGID($projectId, $name)
     {
         $sql = "SELECT group_id FROM redcap_data_access_groups WHERE project_id = '$projectId' AND group_name = '$name'";
@@ -783,6 +825,12 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         }
     }
 
+    /**
+     * get project dag information
+     * @param int $projectId
+     * @param null $name
+     * @return bool|\mysqli_result
+     */
     private function getProjectDags($projectId, $name = null)
     {
         if (is_null($name)) {
@@ -826,7 +874,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      * this function will set child record id(which might already be set by getNextRecordDAGID) in case configuration is different
      * @param array $config
      */
-    function getChildRecordId($config)
+    private function getChildRecordId($config)
     {
         $child_id = null;
 
@@ -1019,7 +1067,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      * @param $parent_data : If child migration successful, data about migration to child (else leave as null)
      * @return bool        : return fail/pass status of save data
      */
-    function updateNoteInParent($record_id, $pk_field, $config, $msg, $parent_data = array())
+    private function updateNoteInParent($record_id, $pk_field, $config, $msg, $parent_data = array())
     {
         //$this->emLog($parent_data, "DEBUG", "RECEIVED THIS DATA");
         $parent_data[$pk_field] = $record_id;
