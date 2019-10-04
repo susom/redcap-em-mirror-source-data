@@ -47,7 +47,7 @@
       "type": "descriptive"
     },
     {
-      "key": "child-projects",
+      "key": "mirror-instances",
       "name": "List of Child Projects to receive Mirrored Data",
       "required": true,
       "type": "sub_settings",
