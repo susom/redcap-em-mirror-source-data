@@ -440,7 +440,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         $child_field_clobber = $config['child-field-clobber'];
 
         //migration_timestamp already has a value and Child_field_clobber is not set
-        if (!empty($migration_timestamp) && ($this->getChild()->isFieldClobber())) {
+        if (!empty($migration_timestamp) && (!$this->getChild()->isFieldClobber())) {
             // Timestamp present - do not re-migrate
             $existing_msg = "No data migration: Clobber not turned on and migration already completed for record "
                 . $this->getMaster()->getRecordId() . " to child project " . $this->getChild()->getProjectId();
