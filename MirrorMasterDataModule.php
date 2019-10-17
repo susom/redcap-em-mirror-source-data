@@ -725,6 +725,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
                 //update parent notes
                 $this->getMaster()->updateNotes($config, $msg, $data);
+                return false;
             } else {
                 /**
                  * let check if parent record is in a DAG, if so lets find the corresponding Child DAG and update the data accordingly
@@ -1042,17 +1043,22 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
                 break;
             case 'migrate-child-form':
-                $arr_fields = $this->getMaster()->getProject()->forms[$config['include-only-form-parent']];
+                $arr_fields = array_keys($this->getChild()->getProject()->forms[$config['include-only-form-child']]['fields']);
                 break;
             case 'migrate-parent-form':
-                $arr_fields = $this->getChild()->getProject()->forms[$config['include-only-form-child']];
+                $arr_fields = array_keys($this->getMaster()->getProject()->forms[$config['include-only-form-parent']]['fields']);
                 break;
         }
 
 
         //lastly remove exclude fields if specified
-        if (count($config['exclude-fields']) > 1) {
-            $arr_fields = array_diff($arr_fields, $config['exclude-fields']);
+        if (count($config['exclude-fields']) > 0) {
+            $diff = array_intersect($config['exclude-fields'], $arr_fields);
+            foreach ($diff as $element) {
+                $key = array_search($element, $arr_fields);
+                unset($arr_fields[$key]);
+            }
+            reset($arr_fields);
             //$this->emDebug($arr_fields, 'EXCLUDED arr_fields:');
         }
 
