@@ -1043,27 +1043,64 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
                 break;
             case 'migrate-child-form':
-                $arr_fields = array_keys($this->getChild()->getProject()->forms[$config['include-only-form-child']]['fields']);
+                $masterFields = array_keys($this->getChild()->getProject()->forms[$config['include-only-form-child']]['fields']);
+                //remove last field which is complete because its does not exist in the child project
+                $masterFields = $this->removeLastField($masterFields);
+
+
+                $childFields = $this->getProjectFields($this->getChild());
+
+                $arr_fields = array_intersect($masterFields, $childFields);
                 break;
             case 'migrate-parent-form':
-                $arr_fields = array_keys($this->getMaster()->getProject()->forms[$config['include-only-form-parent']]['fields']);
+                $masterFields = array_keys($this->getMaster()->getProject()->forms[$config['include-only-form-parent']]['fields']);
+                //remove last field which is complete because its does not exist in the master project
+                $masterFields = $this->removeLastField($masterFields);
+
+                $childFields = $this->getProjectFields($this->getChild());
+
+                $arr_fields = array_intersect($masterFields, $childFields);
                 break;
         }
 
 
         //lastly remove exclude fields if specified
         if (count($config['exclude-fields']) > 0) {
-            $diff = array_intersect($config['exclude-fields'], $arr_fields);
-            foreach ($diff as $element) {
-                $key = array_search($element, $arr_fields);
-                unset($arr_fields[$key]);
-            }
-            reset($arr_fields);
-            //$this->emDebug($arr_fields, 'EXCLUDED arr_fields:');
+            $this->removeExcludedFields($arr_fields, $config);
         }
 
         $this->setMigrationFields($arr_fields);
 
+    }
+
+    /**
+     * @param $arr_fields
+     * @param $config
+     * @return mixed
+     */
+    private function removeExcludedFields($arr_fields, $config)
+    {
+        $diff = array_intersect($config['exclude-fields'], $arr_fields);
+        foreach ($diff as $element) {
+            $key = array_search($element, $arr_fields);
+            if ($key) {
+                unset($arr_fields[$key]);
+            }
+        }
+        reset($arr_fields);
+        //$this->emDebug($arr_fields, 'EXCLUDED arr_fields:');
+        return $arr_fields;
+    }
+
+    /**
+     * @param $fields
+     * @return mixed
+     */
+    private function removeLastField($fields)
+    {
+        $length = count($fields) - 1;
+        unset($fields[$length]);
+        return $fields;
     }
 }
 
