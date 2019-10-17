@@ -721,7 +721,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                         true);
                 $this->emError($msg);
                 $this->emError("CHILD ERROR", $result);
-                $data['migration-notes'] = $msg;
+                $data[$config['migration-notes']] = $msg;
 
                 //update parent notes
                 $this->getMaster()->updateNotes($config, $msg, $data);
