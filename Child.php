@@ -57,41 +57,87 @@ class Child
      * @param null $instrument
      * @param null $dags
      */
-    public function __construct($projectId, $eventId = null, $recordId = null, $instrument = null, $dags = null)
+    public function __construct($projectId)
     {
-        try {
-            $this->setProjectId($projectId);
+        $this->setProjectId($projectId);
 
 
-            $this->setProject(new \Project($this->getProjectId()));
-
-            /**
-             * for regular project we do not pass events.
-             */
-            if (!is_null($eventId)) {
-                $this->setEventId($eventId);
-
-                $this->setEventName(\REDCap::getEventNames(true, true, $this->getEventId()));
-            }
-
-
-            $this->setPrimaryKey($this->getProject()->table_pk);
-            if (!is_null($recordId)) {
-                $this->setRecordId($recordId);
-            }
-
-            if (!is_null($instrument)) {
-                $this->setInstrument($instrument);
-            }
-
-            if (!is_null($dags)) {
-                $this->setDags($dags);
-            }
-        } catch (\Exception $e) {
-            echo $e->getMessage();
-        }
-
+        $this->setProject(new \Project($this->getProjectId()));
     }
+
+
+
+    /**
+     * @param $pid
+     * @param int $event_id : Pass NULL or '' if CLASSICAL
+     * @param string $prefix
+     * @param bool $padding
+     * @return bool|int|string
+     * @throws
+     */
+    public function getNextRecordId($prefix = '', $padding = false)
+    {
+        $q = \REDCap::getData($this->getProjectId(), 'array', null, array($this->getPrimaryKey()), $this->getEventId());
+        //$this->emLog($q, "Found records in project $pid using $id_field");
+        $i = 1;
+        do {
+            // Make a padded number
+            if ($padding) {
+                // make sure we haven't exceeded padding, pad of 2 means
+                //$max = 10^$padding;
+                $max = 10 ** $padding;
+                if ($i >= $max) {
+                    $this->emLog("Error - $i exceeds max of $max permitted by padding of $padding characters");
+                    return false;
+                }
+                $id = str_pad($i, $padding, "0", STR_PAD_LEFT);
+                //$this->emLog("Padded to $padding for $i is $id");
+            } else {
+                $id = $i;
+            }
+
+            // Add the prefix
+            $id = $prefix . $id;
+            //$this->emLog("Prefixed id for $i is $id for event_id $event_id and idfield $id_field");
+
+            $i++;
+        } while (!empty($q[$id][$this->getEventId()][$this->getPrimaryKey()]));
+
+        $this->emLog("Next ID in project " . $this->getProjectId() . " for field " . $this->getPrimaryKey() . " is $id");
+
+        return $id;
+    }
+
+    /**
+     * check if child record already saved before
+     * @return bool
+     */
+    public function isRecordIdExist()
+    {
+        $results = REDCap::getData($this->getProjectId(), 'json', $this->getRecordId(), null, $this->getEventName());
+        $results = json_decode($results, true);
+        $target_results = current($results);
+        if ((!empty($target_results))) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * get child arm for current event
+     * @return bool|int
+     */
+    public function getArm()
+    {
+        $arm = db_result(db_query("select arm_num from redcap_events_arms a, redcap_events_metadata e where a.arm_id = e.arm_id and e.event_id = " . $this->getEventId()),
+            0);
+        // Just in case arm is blank somehow
+        if ($arm == "" || !is_numeric($arm)) {
+            $arm = 1;
+        }
+        return $arm;
+    }
+
 
     /**
      * @return array
@@ -284,77 +330,5 @@ class Child
     public function setFieldClobber($fieldClobber)
     {
         $this->fieldClobber = $fieldClobber;
-    }
-
-
-    /**
-     * @param $pid
-     * @param int $event_id : Pass NULL or '' if CLASSICAL
-     * @param string $prefix
-     * @param bool $padding
-     * @return bool|int|string
-     * @throws
-     */
-    public function getNextRecordId($prefix = '', $padding = false)
-    {
-        $q = \REDCap::getData($this->getProjectId(), 'array', null, array($this->getPrimaryKey()), $this->getEventId());
-        //$this->emLog($q, "Found records in project $pid using $id_field");
-        $i = 1;
-        do {
-            // Make a padded number
-            if ($padding) {
-                // make sure we haven't exceeded padding, pad of 2 means
-                //$max = 10^$padding;
-                $max = 10 ** $padding;
-                if ($i >= $max) {
-                    $this->emLog("Error - $i exceeds max of $max permitted by padding of $padding characters");
-                    return false;
-                }
-                $id = str_pad($i, $padding, "0", STR_PAD_LEFT);
-                //$this->emLog("Padded to $padding for $i is $id");
-            } else {
-                $id = $i;
-            }
-
-            // Add the prefix
-            $id = $prefix . $id;
-            //$this->emLog("Prefixed id for $i is $id for event_id $event_id and idfield $id_field");
-
-            $i++;
-        } while (!empty($q[$id][$this->getEventId()][$this->getPrimaryKey()]));
-
-        $this->emLog("Next ID in project " . $this->getProjectId() . " for field " . $this->getPrimaryKey() . " is $id");
-
-        return $id;
-    }
-
-    /**
-     * check if child record already saved before
-     * @return bool
-     */
-    public function isRecordIdExist()
-    {
-        $results = REDCap::getData($this->getProjectId(), 'json', $this->getRecordId(), null, $this->getEventName());
-        $results = json_decode($results, true);
-        $target_results = current($results);
-        if ((!empty($target_results))) {
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * get child arm for current event
-     * @return bool|int
-     */
-    public function getArm()
-    {
-        $arm = db_result(db_query("select arm_num from redcap_events_arms a, redcap_events_metadata e where a.arm_id = e.arm_id and e.event_id = " . $this->getEventId()),
-            0);
-        // Just in case arm is blank somehow
-        if ($arm == "" || !is_numeric($arm)) {
-            $arm = 1;
-        }
-        return $arm;
     }
 }

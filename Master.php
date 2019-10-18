@@ -51,32 +51,73 @@ class Master
      */
     public function __construct($projectId, $eventId, $recordId = null, $instrument = null, $dags = null)
     {
-        try {
-            $this->setProjectId($projectId);
+        $this->setProjectId($projectId);
 
-            $this->setEventId($eventId);
+        $this->setEventId($eventId);
 
-            $this->setEventName(\REDCap::getEventNames(true, true, $this->getEventId()));
+        $this->setEventName(\REDCap::getEventNames(true, true, $this->getEventId()));
 
-            $this->setProject(new \Project($this->getProjectId()));
+        $this->setProject(new \Project($this->getProjectId()));
 
-            $this->setPrimaryKey($this->getProject()->table_pk);
-            if (!is_null($recordId)) {
-                $this->setRecordId($recordId);
-            }
+        $this->setPrimaryKey($this->getProject()->table_pk);
+        if (!is_null($recordId)) {
+            $this->setRecordId($recordId);
+        }
 
-            if (!is_null($instrument)) {
-                $this->setInstrument($instrument);
-            }
+        if (!is_null($instrument)) {
+            $this->setInstrument($instrument);
+        }
 
-            if (!is_null($dags)) {
-                $this->setDags($dags);
-            }
-        } catch (\Exception $e) {
-            echo $e->getMessage();
+        if (!is_null($dags)) {
+            $this->setDags($dags);
         }
 
     }
+
+    /**
+     * Bubble up status to user via the timestamp and notes field in the parent form
+     * in config file as 'migration-notes'
+     * @param $config : config fields for migration module
+     * @param $msg : Message to enter into Notes field
+     * @param $parent_data : If child migration successful, data about migration to child (else leave as null)
+     * @return bool        : return fail/pass status of save data
+     */
+    public function updateNotes($config, $msg, $parent_data = array())
+    {
+        //$this->emLog($parent_data, "DEBUG", "RECEIVED THIS DATA");
+        $parent_data[$this->getPrimaryKey()] = $this->getRecordId();
+        if (isset($config['migration-notes'])) {
+            $parent_data[$config['migration-notes']] = $msg;
+        }
+
+        if (!empty($config['master-event-name'])) {
+            //assuming that current event is the right event
+            //$this->emLog("Event name from REDCap::getEventNames : $master_event / EVENT name from this->redcap_event_name: ".$this->redcap_event_name);
+            $parent_data['redcap_event_name'] = $this->getEventName(); //$config['master-event-name'];
+        }
+
+        //$this->emLog($parent_data, "Saving Parent Data");
+        $result = REDCap::saveData(
+            $this->getProjectId(),
+            'json',
+            json_encode(array($parent_data)),
+            'overwrite');
+
+        // Check for upload errors
+        if (!empty($result['errors'])) {
+            $msg = "Error creating record in PARENT project " . $this->getProjectId() . " - ask administrator to review logs: " . json_encode($result);
+            //$sr->updateFinalReviewNotes($msg);
+            //todo: bubble up to user : should this be sent to logging?
+            $this->emError($msg);
+            $this->emError("RESULT OF PARENT: " . print_r($result, true));
+            //logEvent($description, $changes_made="", $sql="", $record=null, $event_id=null, $project_id=null);
+            REDCap::logEvent("Mirror Master Data Module", $msg, null, $this->getRecordId(),
+                $config['master-event-name']);
+            return false;
+        }
+
+    }
+
 
     /**
      * @return int
@@ -222,89 +263,5 @@ class Master
         $this->primaryKey = $primaryKey;
     }
 
-    /**
-     * @param $pid
-     * @param int $event_id : Pass NULL or '' if CLASSICAL
-     * @param string $prefix
-     * @param bool $padding
-     * @return bool|int|string
-     * @throws
-     */
-    public function getNextRecordId($prefix = '', $padding = false)
-    {
-        $q = \REDCap::getData($this->getProjectId(), 'array', null, array($this->getPrimaryKey()), $this->getEventId());
-        //$this->emLog($q, "Found records in project $pid using $id_field");
-        $i = 1;
-        do {
-            // Make a padded number
-            if ($padding) {
-                // make sure we haven't exceeded padding, pad of 2 means
-                //$max = 10^$padding;
-                $max = 10 ** $padding;
-                if ($i >= $max) {
-                    $this->emLog("Error - $i exceeds max of $max permitted by padding of $padding characters");
-                    return false;
-                }
-                $id = str_pad($i, $padding, "0", STR_PAD_LEFT);
-                //$this->emLog("Padded to $padding for $i is $id");
-            } else {
-                $id = $i;
-            }
 
-            // Add the prefix
-            $id = $prefix . $id;
-            //$this->emLog("Prefixed id for $i is $id for event_id $event_id and idfield $id_field");
-
-            $i++;
-        } while (!empty($q[$id][$this->getEventId()][$this->getPrimaryKey()]));
-
-        $this->emLog("Next ID in project " . $this->getProjectId() . " for field " . $this->getPrimaryKey() . " is $id");
-        $this->setRecordId($id);
-
-        $this->getRecordId();
-    }
-
-    /**
-     * Bubble up status to user via the timestamp and notes field in the parent form
-     * in config file as 'migration-notes'
-     * @param $config : config fields for migration module
-     * @param $msg : Message to enter into Notes field
-     * @param $parent_data : If child migration successful, data about migration to child (else leave as null)
-     * @return bool        : return fail/pass status of save data
-     */
-    public function updateNotes($config, $msg, $parent_data = array())
-    {
-        //$this->emLog($parent_data, "DEBUG", "RECEIVED THIS DATA");
-        $parent_data[$this->getPrimaryKey()] = $this->getRecordId();
-        if (isset($config['migration-notes'])) {
-            $parent_data[$config['migration-notes']] = $msg;
-        }
-
-        if (!empty($config['master-event-name'])) {
-            //assuming that current event is the right event
-            //$this->emLog("Event name from REDCap::getEventNames : $master_event / EVENT name from this->redcap_event_name: ".$this->redcap_event_name);
-            $parent_data['redcap_event_name'] = $this->getEventName(); //$config['master-event-name'];
-        }
-
-        //$this->emLog($parent_data, "Saving Parent Data");
-        $result = REDCap::saveData(
-            $this->getProjectId(),
-            'json',
-            json_encode(array($parent_data)),
-            'overwrite');
-
-        // Check for upload errors
-        if (!empty($result['errors'])) {
-            $msg = "Error creating record in PARENT project " . $this->getProjectId() . " - ask administrator to review logs: " . json_encode($result);
-            //$sr->updateFinalReviewNotes($msg);
-            //todo: bubble up to user : should this be sent to logging?
-            $this->emError($msg);
-            $this->emError("RESULT OF PARENT: " . print_r($result, true));
-            //logEvent($description, $changes_made="", $sql="", $record=null, $event_id=null, $project_id=null);
-            REDCap::logEvent("Mirror Master Data Module", $msg, null, $this->getRecordId(),
-                $config['master-event-name']);
-            return false;
-        }
-
-    }
 }

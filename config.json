@@ -4,7 +4,7 @@
   "description": "Module migrates the intersect of fields found in parent and child project",
   "versions": [
     {
-      "0.1 ": "Initial Development Version"
+      "1.0 ": "First Version"
     }
   ],
   "authors": [
@@ -25,11 +25,7 @@
     }
   ],
   "permissions": [
-    "hook_save_record",
-    "hook_control_center",
-    "select_data",
-    "update_data",
-    "delete_data"
+    "hook_save_record"
   ],
   "links": {
     "control-center": [
@@ -89,30 +85,6 @@
           "type": "text"
         },
         {
-          "key": "fields-to-migrate",
-          "name": "<h6><span class='text-lg badge badge-lg badge-secondary'>SELECT FIELD COPY OPTIONS</span></h6>Fields in both the <span class='text-lg badge badge-lg badge-success'>parent project</span> and the <span class='text-lg badge badge-lg badge-danger'>target project</span> have to have the same fieldnames (and same choices if radio/dropdown/checkbox)",
-          "required": true,
-          "type": "dropdown",
-          "choices": [
-            {
-              "name": "Migrate all common fieldnames",
-              "value": "migrate-intersect"
-            },
-            {
-              "name": "Migrate a specified list of fieldnames",
-              "value": "migrate-intersect-specified"
-            },
-            {
-              "name": "Migrate only specified TARGET form",
-              "value": "migrate-child-form"
-            },
-            {
-              "name": "Migrate only specified PARENT form",
-              "value": "migrate-parent-form"
-            }
-          ]
-        },
-        {
           "key": "dag_configuration",
           "name": "<h6><span class='text-lg badge badge-lg badge-secondary'>DAG Configuration</span></h6>",
           "type": "descriptive"
@@ -141,6 +113,30 @@
               "name": "Type Child DAG",
               "required": false,
               "type": "text"
+            }
+          ]
+        },
+        {
+          "key": "fields-to-migrate",
+          "name": "<h6><span class='text-lg badge badge-lg badge-secondary'>SELECT FIELD COPY OPTIONS</span></h6>Fields in both the <span class='text-lg badge badge-lg badge-success'>parent project</span> and the <span class='text-lg badge badge-lg badge-danger'>target project</span> have to have the same fieldnames (and same choices if radio/dropdown/checkbox)",
+          "required": true,
+          "type": "dropdown",
+          "choices": [
+            {
+              "name": "Migrate all common fieldnames",
+              "value": "migrate-intersect"
+            },
+            {
+              "name": "Migrate a specified list of fieldnames",
+              "value": "migrate-intersect-specified"
+            },
+            {
+              "name": "Migrate only specified TARGET form",
+              "value": "migrate-child-form"
+            },
+            {
+              "name": "Migrate only specified PARENT form",
+              "value": "migrate-parent-form"
             }
           ]
         },

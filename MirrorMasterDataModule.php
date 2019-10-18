@@ -91,216 +91,6 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
     private $dagRecordId;
 
     /**
-     * @return array
-     */
-    public function getMigrationFields()
-    {
-        return $this->migrationFields;
-    }
-
-    /**
-     * @param array $migrationFields
-     */
-    public function setMigrationFields($migrationFields)
-    {
-        $this->migrationFields = $migrationFields;
-    }
-
-    /**
-     * @return Master
-     */
-    public function getMaster()
-    {
-        return $this->master;
-    }
-
-    /**
-     * @param Master $master
-     */
-    public function setMaster($master)
-    {
-        $this->master = $master;
-    }
-
-    /**
-     * @return Child
-     */
-    public function getChild()
-    {
-        return $this->child;
-    }
-
-    /**
-     * @param Child $child
-     */
-    public function setChild($child)
-    {
-        $this->child = $child;
-    }
-
-    /**
-     * @return array
-     */
-    public function getMasterDAGs()
-    {
-        return $this->masterDAGs;
-    }
-
-    /**
-     */
-    public function setMasterDAGs()
-    {
-        $this->masterDAGs = $this->getProjectSetting("master-dag");
-    }
-
-    /**
-     * @return array
-     */
-    public function getChildrenDAGs()
-    {
-        return $this->childrenDAGs;
-    }
-
-    /**
-     */
-    public function setChildrenDAGs()
-    {
-        $this->childrenDAGs = $this->getProjectSetting("child-dag");
-    }
-
-    /**
-     * @return array
-     */
-    public function getDagMaps()
-    {
-        return $this->dagMaps;
-    }
-
-    /**
-     * @param array $dagMaps
-     */
-    public function setDagMaps($dagMaps)
-    {
-        $this->dagMaps = $dagMaps;
-    }
-
-    /**
-     * @return string
-     */
-    public function getTriggerEvent()
-    {
-        return $this->triggerEvent;
-    }
-
-    /**
-     * @param string $triggerEvent
-     */
-    public function setTriggerEvent($triggerEvent)
-    {
-        $this->triggerEvent = $triggerEvent;
-    }
-
-    /**
-     * @return string
-     */
-    public function getTriggerInstrument()
-    {
-        return $this->triggerInstrument;
-    }
-
-    /**
-     * @param string $triggerInstrument
-     */
-    public function setTriggerInstrument($triggerInstrument)
-    {
-        $this->triggerInstrument = $triggerInstrument;
-    }
-
-
-    /**
-     * @return mixed
-     */
-    public function getDagId()
-    {
-        return $this->dagId;
-    }
-
-    /**
-     * @param mixed $dagId
-     */
-    public function setDagId($dagId)
-    {
-        $this->dagId = $dagId;
-    }
-
-    /**
-     * @return mixed
-     */
-    public function getDagRecordId()
-    {
-        return $this->dagRecordId;
-    }
-
-    /**
-     * @param mixed $dagRecordId
-     */
-    public function setDagRecordId($dagRecordId)
-    {
-        $this->dagRecordId = $dagRecordId;
-    }
-
-    /**
-     * map master and child dags. $key is used to link between current sub-setting instance to the dag instance.
-     * @param array $config
-     * @param int $key
-     */
-    private function processMapDAGs($config, $key)
-    {
-
-        /**
-         * if same dags names between master and child is checked:
-         * 1. will check if map is defined manually for each dags in master and child
-         * 2. if dags in master has no manual mapping in config.json them try to find dag with same name in child project.
-         */
-        if ($config['same-dags-name']) {
-            $masterDags = $this->getProjectDags($this->getProjectId());
-            while ($row = db_fetch_assoc($masterDags)) {
-                //in case no match let check if dags map is manually defined
-                $childDagIndex = $this->searchForDAGIndex($this->getMasterDAGs()[$key], $row['group_id']);
-                if (!is_null($childDagIndex)) {
-                    $dags[] = array(
-                        "master" => $row['group_id'],
-                        "child" => $this->getProjectDAGID($config['child-project-id'],
-                            $this->getChildrenDAGs()[$key][$childDagIndex])
-                    );
-                } else {
-                    //search if master dag name match dag name in child project.
-                    $childDag = $this->getProjectDags($config['child-project-id'], $row['group_name']);
-                    if ($childDag) {
-                        $childRow = db_fetch_assoc($childDag);
-                        $dags[] = array("master" => $row['group_id'], "child" => $childRow['group_id']);
-                        $config['master-child-dags'] = json_encode($dags);
-                    }
-                }
-            }
-        } else {
-            if ($config['master-child-dag-map']) {
-                foreach ($config['master-child-dag-map'] as $instanceKey => $instance) {
-                    $dags[] = array(
-                        "master" => $this->getMasterDAGs()[$key][$instanceKey],
-                        "child" => $this->getProjectDAGID($config['child-project-id'],
-                            $this->getChildrenDAGs()[$key][$instanceKey])
-                    );
-                }
-            }
-
-        }
-        if (!empty($dags)) {
-            $this->setDagMaps($dags);
-        }
-    }
-
-    /**
      * Hook method which gets called at save
      *
      * @param $project_id
@@ -320,61 +110,67 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         $group_id
     ) {
 
-        //Initiate Master Entity and all information for Master Project will be saved there and you can access it via getter methods DO NOT ACCESS direct parameters
+        try {
+            //Initiate Master Entity and all information for Master Project will be saved there and you can access it via getter methods DO NOT ACCESS direct parameters
 
-        $this->setMaster(new Master($project_id, $event_id, $record, $instrument));
-        $this->emDebug(
-            "PROJECT: $project_id",
-            "RECORD: $record",
-            "EVENT_ID: $event_id",
-            "INSTRUMENT: $instrument",
-            "REDCAP_EVENT_NAME: " . $this->getMaster()->getEventName());
+            $this->setMaster(new Master($project_id, $event_id, $record, $instrument));
+            $this->emDebug(
+                "PROJECT: $project_id",
+                "RECORD: $record",
+                "EVENT_ID: $event_id",
+                "INSTRUMENT: $instrument",
+                "REDCAP_EVENT_NAME: " . $this->getMaster()->getEventName());
 
-        // Loop through each MMD Setting
-        $subsettings = $this->getSubSettings('mirror-instances');
+            // Loop through each MMD Setting
+            $subSettings = $this->getSubSettings('mirror-instances');
 
-        //flag to run finalMirrorProcess
-        $final = false;
-        /**
-         * we are getting master/child dags instances outside sub-setting because REDCap return true/false instead of values inside sub-setting for Master/Child dags.
-         */
-        $this->setMasterDAGs();
-
-        $this->setChildrenDAGs();
-
-        foreach ($subsettings as $key => $config) {
+            //flag to run finalMirrorProcess
+            $final = false;
             /**
-             * if dags mapping is defined/enabled process the map between master and current child project in sub-setting
+             * we are getting master/child dags instances outside sub-setting because REDCap return true/false instead of values inside sub-setting for Master/Child dags.
              */
-            if ($config['same-dags-name'] || !empty($config['master-child-dag-map'])) {
-                $this->processMapDAGs($config, $key);
-            }
+            $this->setMasterDAGs();
 
-            /**
-             * in case we have DAGs mapped loop over all of them and insert only the one user belongs to.
-             */
-            if (!empty($this->getDagMaps()) && !is_null($group_id)) {
-                foreach ($this->getDagMaps() as $dag) {
-                    $config['master-child-dags'] = json_encode($dag);
-                    $this->setDagId($dag['child']);
-                    $this->emDebug("config", $config);
-                    //check if user inside current dag
-                    if (($config['same-dags-name'] || !empty($config['master-child-dag-map'])) && !$this->isUserInDAG($config['child-project-id'],
-                            USERID,
-                            $this->getDagId())) {
-                        //we are in wrong DAG
-                        continue;
+            $this->setChildrenDAGs();
+
+            foreach ($subSettings as $key => $config) {
+                /**
+                 * if dags mapping is defined/enabled process the map between master and current child project in sub-setting
+                 */
+                if ($config['same-dags-name'] || !empty($config['master-child-dag-map'])) {
+                    $this->processMapDAGs($config, $key);
+                }
+
+                /**
+                 * in case we have DAGs mapped loop over all of them and insert only the one user belongs to.
+                 */
+                if (!empty($this->getDagMaps()) && !is_null($group_id)) {
+                    foreach ($this->getDagMaps() as $dag) {
+                        $config['master-child-dags'] = json_encode($dag);
+                        $this->setDagId($dag['child']);
+                        $this->emDebug("config", $config);
+                        //check if user inside current dag
+                        if (($config['same-dags-name'] || !empty($config['master-child-dag-map'])) && !$this->isUserInDAG($config['child-project-id'],
+                                USERID,
+                                $this->getDagId())) {
+                            //we are in wrong DAG
+                            continue;
+                        }
+                        $final = $this->mirrorData($config);
                     }
+                } else {
+                    $this->emDebug("config", $config);
                     $final = $this->mirrorData($config);
                 }
-            } else {
-                $this->emDebug("config", $config);
-                $final = $this->mirrorData($config);
             }
-        }
-        //when done sub-setting loop check if mirror completed if so run finilize mirror.
-        if ($final) {
-            $this->finalizeMirrorProcess();
+            //when done sub-setting loop check if mirror completed if so run finilize mirror.
+            if ($final) {
+                $this->finalizeMirrorProcess();
+            }
+        } catch (\LogicException $e) {
+            echo $e->getMessage();
+        } catch (\Exception $e) {
+            echo $e->getMessage();
         }
     }
 
@@ -589,7 +385,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
          * intersect master with child fields based on 'fields-to-migrate' and current event selection. also include/exclude fields. this set the fields to $migrationFields
          */
 
-        $this->getIntersectFields($config);
+        $this->setMigrationFields($config);
 
         $this->emDebug("Intersection is " . count($this->getMigrationFields()));
 
@@ -649,7 +445,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             $msg .= "Target ID, " . $this->getChild()->getRecordId() . ", already exists in Child project " . $this->getChild()->getProjectId() . " and clobber is set to false (" . $this->getChild()->isFieldClobber() . ").";
             $this->emDebug($msg);
         } else {
-            //$this->emDebug("PROCEED: Target $child_id does not exists (" . count($target_results) . ") in $child_pid or clobber true ($child_field_clobber).");
+            //$this->emDebug("PROCEED: Target $childId does not exists (" . count($target_results) . ") in $child_pid or clobber true ($child_field_clobber).");
 
             //5. SET UP CHILD PROJECT TO SAVE DATA
             //GET logging variables from target project
@@ -745,15 +541,15 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                         $record = $this->getChild()->getRecordId();
                         $value = $this->getDagId();
                         $fieldName = '__GROUPID__';
-                        $child_pid = $this->getChild()->getProjectId();
-                        $event_id = $this->getChild()->getEventId();
-                        $this->query("INSERT INTO redcap_data (project_id, event_id, record, field_name, value) VALUES ($child_pid, $event_id, '$record', '$fieldName', '$value')");
+                        $childPid = $this->getChild()->getProjectId();
+                        $eventId = $this->getChild()->getEventId();
+                        $this->query("INSERT INTO redcap_data (project_id, event_id, record, field_name, value) VALUES ($childPid, $eventId, '$record', '$fieldName', '$value')");
 
                         //get child event arm to be used to update id for the dropdown
                         $arm = $this->getChild()->getArm();
 
                         //just update record list. only for Record Status Dashboard dropdown
-                        $this->query("UPDATE redcap_record_list SET dag_id = '$value' WHERE project_id = $child_pid and arm = $arm and record = '$record'");
+                        $this->query("UPDATE redcap_record_list SET dag_id = '$value' WHERE project_id = $childPid and arm = $arm and record = '$record'");
 
 
                     } catch (\Exception $e) {
@@ -762,7 +558,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                         return false;
                     }
                     //
-                    //$this->setDAG(array_pop($result['ids']), $this->getDagId(), $child_pid, $event_id);
+                    //$this->setDAG(array_pop($result['ids']), $this->getDagId(), $childPid, $event_id);
                 }
                 // Call save_record hook on child?
                 $child_save_record_hook = $this->getProjectSetting('child-save-record-hook');
@@ -775,12 +571,12 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                     }
 
                     // REDCap Hook injection point: Pass project_id and record name to method
-                    // \Hooks::call('redcap_save_record', array($child_pid, $child_id, $_GET['page'], $child_event_name, $group_id, null, null, $_GET['instance']));
+                    // \Hooks::call('redcap_save_record', array($childPid, $child_id, $_GET['page'], $child_event_name, $group_id, null, null, $_GET['instance']));
                     \Hooks::call('redcap_save_record',
                         array(
                             $this->getChild()->getProjectId(),
                             $this->getChild()->getRecordId(),
-                            $_GET['page'],
+                            filter_var($_GET['page'], FILTER_SANITIZE_STRING),
                             $this->getChild()->getEventName(),
                             null
                         ));
@@ -859,14 +655,14 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      */
     private function getNextRecordDAGID($childProjectId, $dagId)
     {
-        $sql = "SELECT MAX(record) as record_id FROM redcap_data WHERE field_name = '__GROUPID__' AND `value` = $dagId AND project_id = '$childProjectId'";
+        $sql = "SELECT MAX(record) as recordId FROM redcap_data WHERE field_name = '__GROUPID__' AND `value` = $dagId AND project_id = '$childProjectId'";
         $q = db_query($sql);
 
         $row = db_fetch_row($q);
         if (!empty($row)) {
             $parts = explode("-", $row[0]);
-            $record_id = end($parts) + 1;
-            $this->setDagRecordId($dagId . "-" . $record_id);
+            $recordId = end($parts) + 1;
+            $this->setDagRecordId($dagId . "-" . $recordId);
         } else {
             $this->setDagRecordId($dagId . "-" . 1);
         }
@@ -880,18 +676,18 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      */
     private function getChildRecordId($config)
     {
-        $child_id = null;
+        $childId = null;
 
         // Method for creating the child id (child-id-create-new, child-id-like-parent, child-id-parent-specified)
-        $child_id_select = $config['child-id-select'];
+        $childIdSelect = $config['child-id-select'];
 
         //get primary key for TARGET project
-        $child_pk = $this->getChild()->getPrimaryKey();
+        $childPrimaryKey = $this->getChild()->getPrimaryKey();
 
-        $this->emDebug($this->getMaster()->getRecordId(), $this->getChild()->getProjectId(), $child_id_select,
-            $child_pk);
+        $this->emDebug($this->getMaster()->getRecordId(), $this->getChild()->getProjectId(), $childIdSelect,
+            $childPrimaryKey);
 
-        switch ($child_id_select) {
+        switch ($childIdSelect) {
             case 'child-id-like-parent':
                 $this->getChild()->setRecordId($this->getMaster()->getRecordId());
                 break;
@@ -914,47 +710,47 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
                 //if child record id is was set from previous iteration of sub-setting loop then use that instead so the data is saved to save record
                 if ($this->getChild()->isChangeRecordId()) {
-                    $child_id_prefix = $config['child-id-prefix'];
-                    $child_id_padding = $config['child-id-padding'];
+                    $childIdPrefix = $config['child-id-prefix'];
+                    $childIDPadding = $config['child-id-padding'];
 
                     /**
                      * in case we are adding to DAG just keep whatever we already retrieved
                      */
                     if ($this->getDagRecordId() != null) {
-                        $child_id = $this->getDagRecordId();
+                        $childId = $this->getDagRecordId();
                         // Make a padded number
-                        if ($child_id_padding) {
+                        if ($childIDPadding) {
                             // make sure we haven't exceeded padding, pad of 2 means
                             //$max = 10^$padding;
-                            $max = 10 ** $child_id_padding;
-                            if ($child_id >= $max) {
-                                $this->emLog("Error - $child_id exceeds max of $max permitted by padding of $child_id_padding characters");
+                            $max = 10 ** $childIDPadding;
+                            if ($childId >= $max) {
+                                $this->emLog("Error - $childId exceeds max of $max permitted by padding of $childIDPadding characters");
                                 return false;
                             }
-                            $child_id = str_pad($child_id, $child_id_padding, "0", STR_PAD_LEFT);
+                            $childId = str_pad($childId, $childIDPadding, "0", STR_PAD_LEFT);
                             //$this->emLog("Padded to $padding for $i is $id");
                         }
                         //does prefix is wrapped with square brackets ? if so build the custom prefix.
-                        preg_match("/\[.*?\]/", $child_id_prefix, $matches);
+                        preg_match("/\[.*?\]/", $childIdPrefix, $matches);
                         if (!empty($matches)) {
                             $string = $matches[0];
                             $string = str_replace(array('[', ']'), '', $string);
                             $parts = explode(":", $string);
                             $r = $this->buildCustomPrefix($parts[0], end($parts), $this->getChild()->getProjectId(),
                                 $this->getDagId());
-                            $child_id_prefix = str_replace($matches[0], $r, $child_id_prefix);
+                            $childIdPrefix = str_replace($matches[0], $r, $childIdPrefix);
                         }
-                        $child_id = $child_id_prefix . $child_id;
+                        $childId = $childIdPrefix . $childId;
                     } else {
                         //get next id from child project
-                        $child_id = $this->getChild()->getNextRecordId($child_id_prefix, $child_id_padding);
+                        $childId = $this->getChild()->getNextRecordId($childIdPrefix, $childIDPadding);
                     }
-                    $this->getChild()->setRecordId($child_id);
+                    $this->getChild()->setRecordId($childId);
                 }
                 break;
             default:
-                $child_id = $this->getChild()->getNextRecordId();
-                $this->getChild()->setRecordId($child_id);
+                $childId = $this->getChild()->getNextRecordId();
+                $this->getChild()->setRecordId($childId);
         }
     }
 
@@ -1015,10 +811,10 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      * based on configuration find out the field will be migrated from master project into child project
      * @param array $config
      */
-    private function getIntersectFields($config)
+    private function setMigrationFields($config)
     {
 
-        $arr_fields = array();
+        $arrFields = array();
         //branching logic reset does not clear out old values - force clear here
         switch ($config['fields-to-migrate']) {
             case 'migrate-intersect':
@@ -1027,7 +823,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
                 $childFields = $this->getProjectFields($this->getChild());
 
-                $arr_fields = array_intersect($masterFields, $childFields);
+                $arrFields = array_intersect($masterFields, $childFields);
                 break;
             case 'migrate-intersect-specified':
                 //get master instrument for current event
@@ -1036,10 +832,10 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                 $childFields = $this->getProjectFields($this->getChild());
 
                 //get all fields
-                $arr_fields = array_intersect($masterFields, $childFields);
+                $arrFields = array_intersect($masterFields, $childFields);
 
                 //intersect with included only.
-                $arr_fields = array_intersect($arr_fields, $config['include-only-fields']);
+                $arrFields = array_intersect($arrFields, $config['include-only-fields']);
 
                 break;
             case 'migrate-child-form':
@@ -1050,7 +846,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
                 $childFields = $this->getProjectFields($this->getChild());
 
-                $arr_fields = array_intersect($masterFields, $childFields);
+                $arrFields = array_intersect($masterFields, $childFields);
                 break;
             case 'migrate-parent-form':
                 $masterFields = array_keys($this->getMaster()->getProject()->forms[$config['include-only-form-parent']]['fields']);
@@ -1059,37 +855,37 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
                 $childFields = $this->getProjectFields($this->getChild());
 
-                $arr_fields = array_intersect($masterFields, $childFields);
+                $arrFields = array_intersect($masterFields, $childFields);
                 break;
         }
 
 
         //lastly remove exclude fields if specified
         if (count($config['exclude-fields']) > 0) {
-            $arr_fields = $this->removeExcludedFields($arr_fields, $config);
+            $arrFields = $this->removeExcludedFields($arrFields, $config);
         }
 
-        $this->setMigrationFields($arr_fields);
+        $this->migrationFields = $arrFields;
 
     }
 
     /**
-     * @param $arr_fields
+     * @param $arrFields
      * @param $config
      * @return mixed
      */
-    private function removeExcludedFields($arr_fields, $config)
+    private function removeExcludedFields($arrFields, $config)
     {
-        $diff = array_intersect($config['exclude-fields'], $arr_fields);
+        $diff = array_intersect($config['exclude-fields'], $arrFields);
         foreach ($diff as $element) {
-            $key = array_search($element, $arr_fields);
+            $key = array_search($element, $arrFields);
             if ($key) {
-                unset($arr_fields[$key]);
+                unset($arrFields[$key]);
             }
         }
-        reset($arr_fields);
-        //$this->emDebug($arr_fields, 'EXCLUDED arr_fields:');
-        return $arr_fields;
+        reset($arrFields);
+        //$this->emDebug($arrFields, 'EXCLUDED arr_fields:');
+        return $arrFields;
     }
 
     /**
@@ -1101,6 +897,210 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         $length = count($fields) - 1;
         unset($fields[$length]);
         return $fields;
+    }
+
+
+    /**
+     * @return array
+     */
+    public function getMigrationFields()
+    {
+        return $this->migrationFields;
+    }
+
+    /**
+     * @return Master
+     */
+    public function getMaster()
+    {
+        return $this->master;
+    }
+
+    /**
+     * @param Master $master
+     */
+    public function setMaster($master)
+    {
+        $this->master = $master;
+    }
+
+    /**
+     * @return Child
+     */
+    public function getChild()
+    {
+        return $this->child;
+    }
+
+    /**
+     * @param Child $child
+     */
+    public function setChild($child)
+    {
+        $this->child = $child;
+    }
+
+    /**
+     * @return array
+     */
+    public function getMasterDAGs()
+    {
+        return $this->masterDAGs;
+    }
+
+    /**
+     */
+    public function setMasterDAGs()
+    {
+        $this->masterDAGs = $this->getProjectSetting("master-dag");
+    }
+
+    /**
+     * @return array
+     */
+    public function getChildrenDAGs()
+    {
+        return $this->childrenDAGs;
+    }
+
+    /**
+     */
+    public function setChildrenDAGs()
+    {
+        $this->childrenDAGs = $this->getProjectSetting("child-dag");
+    }
+
+    /**
+     * @return array
+     */
+    public function getDagMaps()
+    {
+        return $this->dagMaps;
+    }
+
+    /**
+     * @param array $dagMaps
+     */
+    public function setDagMaps($dagMaps)
+    {
+        $this->dagMaps = $dagMaps;
+    }
+
+    /**
+     * @return string
+     */
+    public function getTriggerEvent()
+    {
+        return $this->triggerEvent;
+    }
+
+    /**
+     * @param string $triggerEvent
+     */
+    public function setTriggerEvent($triggerEvent)
+    {
+        $this->triggerEvent = $triggerEvent;
+    }
+
+    /**
+     * @return string
+     */
+    public function getTriggerInstrument()
+    {
+        return $this->triggerInstrument;
+    }
+
+    /**
+     * @param string $triggerInstrument
+     */
+    public function setTriggerInstrument($triggerInstrument)
+    {
+        $this->triggerInstrument = $triggerInstrument;
+    }
+
+
+    /**
+     * @return mixed
+     */
+    public function getDagId()
+    {
+        return $this->dagId;
+    }
+
+    /**
+     * @param mixed $dagId
+     */
+    public function setDagId($dagId)
+    {
+        $this->dagId = $dagId;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getDagRecordId()
+    {
+        return $this->dagRecordId;
+    }
+
+    /**
+     * @param mixed $dagRecordId
+     */
+    public function setDagRecordId($dagRecordId)
+    {
+        $this->dagRecordId = $dagRecordId;
+    }
+
+
+    /**
+     * map master and child dags. $key is used to link between current sub-setting instance to the dag instance.
+     * @param array $config
+     * @param int $key
+     */
+    private function processMapDAGs($config, $key)
+    {
+
+        /**
+         * if same dags names between master and child is checked:
+         * 1. will check if map is defined manually for each dags in master and child
+         * 2. if dags in master has no manual mapping in config.json them try to find dag with same name in child project.
+         */
+        if ($config['same-dags-name']) {
+            $masterDags = $this->getProjectDags($this->getProjectId());
+            while ($row = db_fetch_assoc($masterDags)) {
+                //in case no match let check if dags map is manually defined
+                $childDagIndex = $this->searchForDAGIndex($this->getMasterDAGs()[$key], $row['group_id']);
+                if (!is_null($childDagIndex)) {
+                    $dags[] = array(
+                        "master" => $row['group_id'],
+                        "child" => $this->getProjectDAGID($config['child-project-id'],
+                            $this->getChildrenDAGs()[$key][$childDagIndex])
+                    );
+                } else {
+                    //search if master dag name match dag name in child project.
+                    $childDag = $this->getProjectDags($config['child-project-id'], $row['group_name']);
+                    if ($childDag) {
+                        $childRow = db_fetch_assoc($childDag);
+                        $dags[] = array("master" => $row['group_id'], "child" => $childRow['group_id']);
+                        $config['master-child-dags'] = json_encode($dags);
+                    }
+                }
+            }
+        } else {
+            if ($config['master-child-dag-map']) {
+                foreach ($config['master-child-dag-map'] as $instanceKey => $instance) {
+                    $dags[] = array(
+                        "master" => $this->getMasterDAGs()[$key][$instanceKey],
+                        "child" => $this->getProjectDAGID($config['child-project-id'],
+                            $this->getChildrenDAGs()[$key][$instanceKey])
+                    );
+                }
+            }
+
+        }
+        if (!empty($dags)) {
+            $this->setDagMaps($dags);
+        }
     }
 }
 
