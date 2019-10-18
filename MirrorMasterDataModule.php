@@ -1066,7 +1066,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
         //lastly remove exclude fields if specified
         if (count($config['exclude-fields']) > 0) {
-            $this->removeExcludedFields($arr_fields, $config);
+            $arr_fields = $this->removeExcludedFields($arr_fields, $config);
         }
 
         $this->setMigrationFields($arr_fields);
