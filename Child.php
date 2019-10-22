@@ -19,6 +19,7 @@ use REDCap;
  * @property boolean $fieldClobber
  * @property boolean $changeRecordId
  * @property array $config
+ * @property string $PREFIX
  */
 class Child
 {
@@ -49,6 +50,7 @@ class Child
 
     private $config;
 
+    public $PREFIX;
     /**
      * Master constructor.
      * @param $projectId
@@ -57,12 +59,17 @@ class Child
      * @param null $instrument
      * @param null $dags
      */
-    public function __construct($projectId)
+    public function __construct($projectId, $PREFIX)
     {
         $this->setProjectId($projectId);
-
+        /**
+         * this public so we do not have to modify emLoggerTrait
+         */
+        $this->PREFIX = $PREFIX;
 
         $this->setProject(new \Project($this->getProjectId()));
+
+        $this->setPrimaryKey($this->getProject()->table_pk);
     }
 
 
@@ -331,4 +338,21 @@ class Child
     {
         $this->fieldClobber = $fieldClobber;
     }
+
+    /**
+     * @return string
+     */
+    public function getPrefix()
+    {
+        return $this->prefix;
+    }
+
+    /**
+     * @param string $prefix
+     */
+    public function setPrefix($prefix)
+    {
+        $this->prefix = $prefix;
+    }
+
 }

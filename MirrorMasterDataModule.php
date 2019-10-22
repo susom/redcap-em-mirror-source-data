@@ -25,6 +25,7 @@ use Sabre\DAV\Exception;
  * @property array $migrationFields
  * @property int $dagId
  * @property string $dagRecordId
+ * @property boolean $userInChildDag
  */
 class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 {
@@ -90,6 +91,11 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      */
     private $dagRecordId;
 
+
+    /**
+     * @var boolean
+     */
+    private $userInChildDag = false;
     /**
      * Hook method which gets called at save
      *
@@ -113,7 +119,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         try {
             //Initiate Master Entity and all information for Master Project will be saved there and you can access it via getter methods DO NOT ACCESS direct parameters
 
-            $this->setMaster(new Master($project_id, $event_id, $record, $instrument));
+            $this->setMaster(new Master($project_id, $event_id, $this->PREFIX, $record, $instrument));
             $this->emDebug(
                 "PROJECT: $project_id",
                 "RECORD: $record",
@@ -145,6 +151,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                  * in case we have DAGs mapped loop over all of them and insert only the one user belongs to.
                  */
                 if (!empty($this->getDagMaps()) && !is_null($group_id)) {
+
                     foreach ($this->getDagMaps() as $dag) {
                         $config['master-child-dags'] = json_encode($dag);
                         $this->setDagId($dag['child']);
@@ -155,8 +162,14 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                                 $this->getDagId())) {
                             //we are in wrong DAG
                             continue;
+                        } else {
+                            $final = $this->mirrorData($config);
+                            $this->setUserInChildDag(true);
                         }
-                        $final = $this->mirrorData($config);
+                    }
+
+                    if (!$this->isUserInChildDag()) {
+                        $this->getMaster()->updateNotes($config, USERID . " is not assigned to any child DAG");
                     }
                 } else {
                     $this->emDebug("config", $config);
@@ -316,7 +329,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             if ($this->getChild() && $this->getChild()->getProjectId() != $config['child-project-id']) {
                 $this->finalizeMirrorProcess();
             } else {
-                $this->setChild(new Child($config['child-project-id']));
+                $this->setChild(new Child($config['child-project-id'], $this->PREFIX));
                 //save configuration so when we are done with this child we can update parent note.
                 $this->getChild()->setConfig($config);
             }
@@ -347,6 +360,13 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      */
     private function mirrorData($config)
     {
+
+
+        //verify logic
+        if (!$this->processMirrorLogic($config)) {
+            return false;
+        }
+
         //set child object with other required parameters
         $this->initiateChildProject($config);
 
@@ -373,13 +393,6 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         if (!$this->checkMigrationCompleted($config)) {
             return false;
         }
-
-
-        //verify logic
-        if (!$this->processMirrorLogic($config)) {
-            return false;
-        }
-
 
         /**
          * intersect master with child fields based on 'fields-to-migrate' and current event selection. also include/exclude fields. this set the fields to $migrationFields
@@ -1051,6 +1064,24 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         $this->dagRecordId = $dagRecordId;
     }
 
+    /**
+     * @return bool
+     */
+    public function isUserInChildDag()
+    {
+        return $this->userInChildDag;
+    }
+
+    /**
+     * @param bool $userInChildDag
+     */
+    public function setUserInChildDag($userInChildDag)
+    {
+        $this->userInChildDag = $userInChildDag;
+    }
+
+
+
 
     /**
      * map master and child dags. $key is used to link between current sub-setting instance to the dag instance.
@@ -1083,6 +1114,8 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                         $childRow = db_fetch_assoc($childDag);
                         $dags[] = array("master" => $row['group_id'], "child" => $childRow['group_id']);
                         $config['master-child-dags'] = json_encode($dags);
+                    } else {
+                        $this->emDebug("No Child DAG ", " No Child DAG match the Master DAG " . $row['group_id']);
                     }
                 }
             }

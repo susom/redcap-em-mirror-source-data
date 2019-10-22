@@ -16,6 +16,7 @@ use REDCap;
  * @property string $instrument
  * @property string $eventName
  * @property string $primaryKey
+ * @property string $PREFIX
  *
  */
 class Master
@@ -41,6 +42,7 @@ class Master
 
     private $primaryKey;
 
+    public $PREFIX;
     /**
      * Master constructor.
      * @param $projectId
@@ -49,7 +51,7 @@ class Master
      * @param null $instrument
      * @param null $dags
      */
-    public function __construct($projectId, $eventId, $recordId = null, $instrument = null, $dags = null)
+    public function __construct($projectId, $eventId, $prefix, $recordId = null, $instrument = null, $dags = null)
     {
         $this->setProjectId($projectId);
 
@@ -72,6 +74,10 @@ class Master
             $this->setDags($dags);
         }
 
+        /**
+         * this public so we do not have to modify emLoggerTrait
+         */
+        $this->PREFIX;
     }
 
     /**

@@ -32,4 +32,9 @@ Mirror Master EM will migrate data from one project to another. Mirror Master su
     4. REDO/Clobber Option(this will cause one master record to be saved multiple times in child).
     
     
-    
+####DAG Configuration:
+To mirror data from one Master DAG to a child DAG.
+1. User must has access to both project and assigned to the defined DAGs.
+2. If checkbox  same DAGs name is checked the EM will map Master DAGs to their DAGs with same name in child project. 
+3. Manual DAGs mapping overrides same DAGs name option. 
+4.      
