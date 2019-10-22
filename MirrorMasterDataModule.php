@@ -256,13 +256,13 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             $this->emDebug($existing_msg);
 
             // //reset the migration timestamp and child_id
-            $log_data = array();
-            $log_data[$config['parent-field-for-child-id']] = '';
-            $log_data[$config['migration-timestamp']] = date('Y-m-d H:i:s');
+            //$log_data = array();
+            //$log_data[$config['parent-field-for-child-id']] = '';
+            //$log_data[$config['migration-timestamp']] = date('Y-m-d H:i:s');
             //
             // //UPDATE PARENT LOG
             // This was to-do added by Andy so I added it to update master record that migration did not happened because it already done before.
-            $this->getMaster()->updateNotes($config, $existing_msg, $log_data);
+            $this->getMaster()->updateNotes($config, $existing_msg);
 
             return false;
         }
