@@ -145,33 +145,21 @@
           "name": "<h6><span class='text-lg badge badge-lg badge-secondary'>INCLUDED FIELD LIST</span></h6>List of fields to include - must be present in both projects.",
           "required": false,
           "type": "field-list",
-          "repeatable": true,
-          "branchingLogic": {
-            "field": "fields-to-migrate",
-            "value": "migrate-intersect-specified"
-          }
+          "repeatable": true
         },
         {
           "key": "include-only-form-child",
           "name": "<h6><span class='text-lg badge badge-lg badge-danger'>CHILD FORM ONLY</span></h6>Migrate only the fields on this form.",
           "required": false,
           "type": "text",
-          "repeatable": false,
-          "branchingLogic": {
-            "field": "fields-to-migrate",
-            "value": "migrate-child-form"
-          }
+          "repeatable": false
         },
         {
           "key": "include-only-form-parent",
           "name": "<h6><span class='text-lg badge badge-lg badge-success'>PARENT FORM ONLY</span></h6>Migrate only fields from this PARENT form.",
           "required": false,
           "type": "form-list",
-          "repeatable": false,
-          "branchingLogic": {
-            "field": "fields-to-migrate",
-            "value": "migrate-parent-form"
-          }
+          "repeatable": false
         },
         {
           "key": "exclude-fields",

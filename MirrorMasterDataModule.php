@@ -140,6 +140,11 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             $this->setChildrenDAGs();
 
             foreach ($subSettings as $key => $config) {
+
+                //verify logic
+                if (!$this->processMirrorLogic($config)) {
+                    continue;
+                }
                 /**
                  * if dags mapping is defined/enabled process the map between master and current child project in sub-setting
                  */
@@ -148,7 +153,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                 }
 
                 /**
-                 * in case we have DAGs mapped loop over all of them and insert only the one user belongs to.
+                 * in case we have DAGs mapped loop over all of them and insert only the one user belongs to. if su
                  */
                 if (!empty($this->getDagMaps()) && !is_null($group_id)) {
 
@@ -156,15 +161,23 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                         $config['master-child-dags'] = json_encode($dag);
                         $this->setDagId($dag['child']);
                         $this->emDebug("config", $config);
-                        //check if user inside current dag
-                        if (($config['same-dags-name'] || !empty($config['master-child-dag-map'])) && !$this->isUserInDAG($config['child-project-id'],
-                                USERID,
-                                $this->getDagId())) {
-                            //we are in wrong DAG
-                            continue;
-                        } else {
+
+
+                        //exception when user is super user then add only the record to child dag mapped to the master dag
+                        if (SUPER_USER && $dag['master'] == $group_id) {
                             $final = $this->mirrorData($config);
                             $this->setUserInChildDag(true);
+                        } else {
+                            //check if user inside current dag
+                            if (($config['same-dags-name'] || !empty($config['master-child-dag-map'])) && !$this->isUserInDAG($config['child-project-id'],
+                                    USERID, $this->getDagId())) {
+                                //we are in wrong DAG
+                                continue;
+                            } else {
+
+                                $final = $this->mirrorData($config);
+                                $this->setUserInChildDag(true);
+                            }
                         }
                     }
 
@@ -361,12 +374,6 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
     private function mirrorData($config)
     {
 
-
-        //verify logic
-        if (!$this->processMirrorLogic($config)) {
-            return false;
-        }
-
         //set child object with other required parameters
         $this->initiateChildProject($config);
 
@@ -429,8 +436,8 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         /**
          * let check if parent record is in a DAG, if so lets find the corresponding Child DAG and update the data accordingly
          */
-        if (($config['same-dags-name'] || !empty($config['master-child-dag-map'])) && strpos($this->getMaster()->getRecordId(),
-                '-') !== false && $this->getChild()->isChangeRecordId()) {
+        // if (($config['same-dags-name'] || !empty($config['master-child-dag-map'])) && strpos($this->getMaster()->getRecordId(),'-') !== false && $this->getChild()->isChangeRecordId()) {
+        if (($config['same-dags-name'] || !empty($config['master-child-dag-map'])) && !empty($this->getDagId()) && $this->getChild()->isChangeRecordId()) {
             //set child record id based on dag information saved inside the hook
             $this->getChild()->setRecordId($this->getNextRecordDAGID($this->getChild()->getProjectId(),
                 $this->getDagId()));
@@ -439,7 +446,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             $record = $this->getMaster()->getRecord();
 
             //modify record id in value to use same value we got in the above tow lines them set the child record
-            $record[$this->getMaster()->getPrimaryKey()] = $this->getChild()->getRecordId();
+            $record[$this->getChild()->getPrimaryKey()] = $this->getChild()->getRecordId();
             $this->getChild()->setRecord($record);
 
         } else {
