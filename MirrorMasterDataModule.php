@@ -264,9 +264,9 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         //migration_timestamp already has a value and Child_field_clobber is not set
         if (!empty($migrationTimestamp) && (!$this->getChild()->isFieldClobber())) {
             // Timestamp present - do not re-migrate
-            $existing_msg = "No data migration: Clobber not turned on and migration already completed for record "
-                . $this->getMaster()->getRecordId() . " to child project " . $this->getChild()->getProjectId();
-            $this->emDebug($existing_msg);
+            $message = "No data migration: Clobber not turned on and migration already completed for record "
+                . $this->getMaster()->getRecordId() . " to child project " . $this->getChild()->getProjectId() . '. To re-save the record in the child project please reset the value in following field: ' . $config['migration-timestamp'];
+            $this->emDebug($message);
 
             // //reset the migration timestamp and child_id
             //$log_data = array();
@@ -275,14 +275,14 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             //
             // //UPDATE PARENT LOG
             // This was to-do added by Andy so I added it to update master record that migration did not happened because it already done before.
-            $this->getMaster()->updateNotes($config, $existing_msg);
+            $this->getMaster()->updateNotes($config, $message);
 
             return false;
         }
 
         $this->emDebug("Doing data migration",
             "Clobber: " . $child_field_clobber,
-            "Migration timestamp: " . $migration_timestamp,
+            "Migration timestamp: " . $migrationTimestamp,
             "Record: " . $this->getMaster()->getRecordId(),
             "Child project: " . $this->getChild()->getProjectId()
         );
@@ -457,7 +457,8 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             $msg = "Error creating record in TARGET project. ";
             $msg .= "Target ID, " . $this->getChild()->getRecordId() . ", already exists in Child project " . $this->getChild()->getProjectId() . " and clobber is set to false (" . $this->getChild()->isFieldClobber() . ").";
             $this->emDebug($msg);
-
+            //update parent notes
+            $this->getMaster()->updateNotes($config, $msg);
             return false;
         } else {
             /**
