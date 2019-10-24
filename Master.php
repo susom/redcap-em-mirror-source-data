@@ -17,6 +17,7 @@ use REDCap;
  * @property string $eventName
  * @property string $primaryKey
  * @property string $PREFIX
+ * @property array $migrationFields
  *
  */
 class Master
@@ -43,6 +44,8 @@ class Master
     private $primaryKey;
 
     public $PREFIX;
+
+    private $migrationFields;
     /**
      * Master constructor.
      * @param $projectId
@@ -126,6 +129,133 @@ class Master
 
 
     /**
+     * @return array
+     */
+    public function getMigrationFields()
+    {
+        return $this->migrationFields;
+    }
+
+    /**
+     * based on configuration find out the field will be migrated from master project into child project
+     * @param $config
+     * @param \Stanford\MirrorMasterDataModule\Child $child
+     */
+    public function setMigrationFields($config, $child)
+    {
+
+        $arrFields = array();
+        //branching logic reset does not clear out old values - force clear here
+        switch ($config['fields-to-migrate']) {
+            case 'migrate-intersect':
+                //get master instrument for current event
+                $masterFields = $this->getProjectFields($this);
+
+                $childFields = $this->getProjectFields($child);
+
+                $arrFields = array_intersect($masterFields, $childFields);
+                break;
+            case 'migrate-intersect-specified':
+                //get master instrument for current event
+                $masterFields = $this->getProjectFields($this);
+
+                $childFields = $this->getProjectFields($child);
+
+                //get all fields
+                $arrFields = array_intersect($masterFields, $childFields);
+
+                //intersect with included only.
+                $arrFields = array_intersect($arrFields, $config['include-only-fields']);
+
+                break;
+            case 'migrate-child-form':
+                $masterFields = array_keys($child->getProject()->forms[$config['include-only-form-child']]['fields']);
+                //remove last field which is complete because its does not exist in the child project
+                $masterFields = $this->removeLastField($masterFields);
+
+
+                $childFields = $this->getProjectFields($child);
+
+                $arrFields = array_intersect($masterFields, $childFields);
+                break;
+            case 'migrate-parent-form':
+                $masterFields = array_keys($this->getProject()->forms[$config['include-only-form-parent']]['fields']);
+                //remove last field which is complete because its does not exist in the master project
+                $masterFields = $this->removeLastField($masterFields);
+
+                $childFields = $this->getProjectFields($child);
+
+                $arrFields = array_intersect($masterFields, $childFields);
+                break;
+        }
+
+
+        //lastly remove exclude fields if specified
+        if (count($config['exclude-fields']) > 0) {
+            $arrFields = $this->removeExcludedFields($arrFields, $config);
+        }
+
+        $this->migrationFields = $arrFields;
+
+    }
+
+
+    /**
+     * @param $arrFields
+     * @param $config
+     * @return mixed
+     */
+    private function removeExcludedFields($arrFields, $config)
+    {
+        $diff = array_intersect($config['exclude-fields'], $arrFields);
+        foreach ($diff as $element) {
+            $key = array_search($element, $arrFields);
+            if ($key) {
+                unset($arrFields[$key]);
+            }
+        }
+        reset($arrFields);
+        //$this->emDebug($arrFields, 'EXCLUDED arr_fields:');
+        return $arrFields;
+    }
+
+    /**
+     * @param Master | Child $project
+     */
+    private function getProjectFields($project)
+    {
+        /**
+         * if event is defined use it otherwise use first event ID
+         */
+        if ($project->getEventId()) {
+            $instruments = $project->getProject()->eventsForms[$project->getEventId()];
+        } else {
+            $instruments = current($project->getProject()->eventsForms);
+        }
+
+        $result = array();
+        foreach ($instruments as $instrument) {
+            $fields = array_keys($project->getProject()->forms[$instrument]['fields']);
+            if (empty($result)) {
+                $result = $fields;
+            } else {
+                $result = array_merge($result, $fields);
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * @param $fields
+     * @return mixed
+     */
+    private function removeLastField($fields)
+    {
+        $length = count($fields) - 1;
+        unset($fields[$length]);
+        return $fields;
+    }
+    /**
      * @return int
      */
     public function getProjectId()
@@ -194,15 +324,26 @@ class Master
      */
     public function getRecord()
     {
-        return $this->record;
+        if ($this->record) {
+            return $this->record;
+        } else {
+            $this->setRecord();
+            return $this->record;
+        }
+
     }
 
     /**
      * @param array $record
      */
-    public function setRecord($record)
+    public function setRecord()
     {
-        $this->record = $record;
+        //4. Get data from master to be saved on child
+        //set master record based on selected fields
+        $results = REDCap::getData('json', $this->getRecordId(), $this->getMigrationFields(),
+            $this->getEventName());
+        $results = json_decode($results, true);
+        $this->record = end($results);
     }
 
     /**

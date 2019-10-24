@@ -110,7 +110,9 @@ trait emLoggerTrait
      * Wrapper for logging debug statements
      */
     function emDebug() {
-        if ( $this->emLoggerDebugMode() && ($emLogger = $this->emLoggerInstance()) ) $emLogger->emLog($this->PREFIX, func_get_args(), "DEBUG");
+        if (($emLogger = $this->emLoggerInstance())) {
+            $emLogger->emLog($this->PREFIX, func_get_args(), "DEBUG");
+        }
     }
 
 }
