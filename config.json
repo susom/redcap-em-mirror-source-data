@@ -4,7 +4,7 @@
   "description": "Module migrates the intersect of fields found in parent and child project",
   "versions": [
     {
-      "0.1 ": "Initial Development Version"
+      "1.0 ": "First Version"
     }
   ],
   "authors": [
@@ -17,14 +17,15 @@
       "name": "Jae Lee",
       "email": "jael@stanford.edu",
       "institution": "Stanford University"
+    },
+    {
+      "name": "Ihab Zeedia",
+      "email": "ihabz@stanford.edu",
+      "institution": "Stanford University"
     }
   ],
   "permissions": [
-    "hook_save_record",
-    "hook_control_center",
-    "select_data",
-    "update_data",
-    "delete_data"
+    "hook_save_record"
   ],
   "links": {
     "control-center": [
@@ -47,7 +48,7 @@
       "type": "descriptive"
     },
     {
-      "key": "child-projects",
+      "key": "mirror-instances",
       "name": "List of Child Projects to receive Mirrored Data",
       "required": true,
       "type": "sub_settings",
@@ -84,30 +85,6 @@
           "type": "text"
         },
         {
-          "key": "fields-to-migrate",
-          "name": "<h6><span class='text-lg badge badge-lg badge-secondary'>SELECT FIELD COPY OPTIONS</span></h6>Fields in both the <span class='text-lg badge badge-lg badge-success'>parent project</span> and the <span class='text-lg badge badge-lg badge-danger'>target project</span> have to have the same fieldnames (and same choices if radio/dropdown/checkbox)",
-          "required": true,
-          "type": "dropdown",
-          "choices": [
-            {
-              "name": "Migrate all common fieldnames",
-              "value": "migrate-intersect"
-            },
-            {
-              "name": "Migrate a specified list of fieldnames",
-              "value": "migrate-intersect-specified"
-            },
-            {
-              "name": "Migrate only specified TARGET form",
-              "value": "migrate-child-form"
-            },
-            {
-              "name": "Migrate only specified PARENT form",
-              "value": "migrate-parent-form"
-            }
-          ]
-        },
-        {
           "key": "dag_configuration",
           "name": "<h6><span class='text-lg badge badge-lg badge-secondary'>DAG Configuration</span></h6>",
           "type": "descriptive"
@@ -140,37 +117,49 @@
           ]
         },
         {
+          "key": "fields-to-migrate",
+          "name": "<h6><span class='text-lg badge badge-lg badge-secondary'>SELECT FIELD COPY OPTIONS</span></h6>Fields in both the <span class='text-lg badge badge-lg badge-success'>parent project</span> and the <span class='text-lg badge badge-lg badge-danger'>target project</span> have to have the same fieldnames (and same choices if radio/dropdown/checkbox)",
+          "required": true,
+          "type": "dropdown",
+          "choices": [
+            {
+              "name": "Migrate all common fieldnames",
+              "value": "migrate-intersect"
+            },
+            {
+              "name": "Migrate a specified list of fieldnames",
+              "value": "migrate-intersect-specified"
+            },
+            {
+              "name": "Migrate only specified TARGET form",
+              "value": "migrate-child-form"
+            },
+            {
+              "name": "Migrate only specified PARENT form",
+              "value": "migrate-parent-form"
+            }
+          ]
+        },
+        {
           "key": "include-only-fields",
           "name": "<h6><span class='text-lg badge badge-lg badge-secondary'>INCLUDED FIELD LIST</span></h6>List of fields to include - must be present in both projects.",
           "required": false,
           "type": "field-list",
-          "repeatable": true,
-          "branchingLogic": {
-            "field": "fields-to-migrate",
-            "value": "migrate-intersect-specified"
-          }
+          "repeatable": true
         },
         {
           "key": "include-only-form-child",
           "name": "<h6><span class='text-lg badge badge-lg badge-danger'>CHILD FORM ONLY</span></h6>Migrate only the fields on this form.",
           "required": false,
           "type": "text",
-          "repeatable": false,
-          "branchingLogic": {
-            "field": "fields-to-migrate",
-            "value": "migrate-child-form"
-          }
+          "repeatable": false
         },
         {
           "key": "include-only-form-parent",
           "name": "<h6><span class='text-lg badge badge-lg badge-success'>PARENT FORM ONLY</span></h6>Migrate only fields from this PARENT form.",
           "required": false,
           "type": "form-list",
-          "repeatable": false,
-          "branchingLogic": {
-            "field": "fields-to-migrate",
-            "value": "migrate-parent-form"
-          }
+          "repeatable": false
         },
         {
           "key": "exclude-fields",
