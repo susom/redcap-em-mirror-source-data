@@ -467,7 +467,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             $result = $this->getChild()->saveData($config, $this->getMaster(),
                 $this->getProjectSetting('child-save-record-hook'),
                 $this->getFirstEventId($this->getChild()->getProjectId()), $this->getDagId());
-            if ($result != true) {
+            if (is_array($result)) {
                 $msg = "Error creating record in CHILD project " . $this->getChild()->getProjectId() . " - ask administrator to review logs: " . print_r($result,
                         true);
                 $this->emError($msg);
@@ -476,6 +476,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
                 //update parent notes
                 $this->getMaster()->updateNotes($config, $msg, $data);
+                return false;
             }
         }
 
