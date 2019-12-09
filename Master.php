@@ -50,7 +50,7 @@ class Master
      * if master is mirroring to multiple child projects. when changing child object check if want to update the notes for master based on previous child status
      * @var
      */
-    public $updateNotes;
+    public $canUpdateNotes;
 
     private $migrationFields;
     /**

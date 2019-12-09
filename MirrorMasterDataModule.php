@@ -166,7 +166,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                         //exception when user is super user then add only the record to child dag mapped to the master dag
                         if (SUPER_USER && $dag['master'] == $group_id) {
 
-                            $this->getMaster()->updateNotes = $this->mirrorData($config);
+                            $this->getMaster()->canUpdateNotes = $this->mirrorData($config);
                             $this->setUserInChildDag(true);
                         } else {
                             //check if user inside current dag
@@ -176,7 +176,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                                 continue;
                             } else {
 
-                                $this->getMaster()->updateNotes = $this->mirrorData($config);
+                                $this->getMaster()->canUpdateNotes = $this->mirrorData($config);
                                 $this->setUserInChildDag(true);
                             }
                         }
@@ -187,14 +187,14 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                     }
                 } else {
                     $this->emDebug("config", $config);
-                    $this->getMaster()->updateNotes = $this->mirrorData($config);
+                    $this->getMaster()->canUpdateNotes = $this->mirrorData($config);
                 }
             }
             //when done sub-setting loop check if mirror completed if so run finalize mirror.
-            if ($this->getMaster()->updateNotes) {
+            if ($this->getMaster()->canUpdateNotes) {
                 $this->finalizeMirrorProcess();
                 //so update is only done if true came from mirrordata function
-                $this->getMaster()->updateNotes = false;
+                $this->getMaster()->canUpdateNotes = false;
             }
         } catch (\LogicException $e) {
             echo $e->getMessage();
@@ -344,7 +344,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
              */
             if ($this->getChild() && $this->getChild()->getProjectId() != $config['child-project-id']) {
                 // we are holding the value on master object so when child object changed we check previous migration to previous child if succeeded.
-                if ($this->getMaster()->updateNotes) {
+                if ($this->getMaster()->canUpdateNotes) {
                     $this->finalizeMirrorProcess();
                 }
                 $this->setChild(new Child($config['child-project-id'], $this->PREFIX));
