@@ -18,6 +18,7 @@ use REDCap;
  * @property string $primaryKey
  * @property string $PREFIX
  * @property array $migrationFields
+ * @property boolean $updateNotes
  *
  */
 class Master
@@ -44,6 +45,12 @@ class Master
     private $primaryKey;
 
     public $PREFIX;
+
+    /**
+     * if master is mirroring to multiple child projects. when changing child object check if want to update the notes for master based on previous child status
+     * @var
+     */
+    private $updateNotes;
 
     private $migrationFields;
     /**
@@ -82,6 +89,24 @@ class Master
          */
         $this->PREFIX;
     }
+
+    /**
+     * @return bool
+     */
+    public function isUpdateNotes(): bool
+    {
+        return $this->updateNotes;
+    }
+
+    /**
+     * @param bool $updateNotes
+     */
+    public function setUpdateNotes(bool $updateNotes): void
+    {
+        $this->updateNotes = $updateNotes;
+    }
+
+
 
     /**
      * Bubble up status to user via the timestamp and notes field in the parent form
