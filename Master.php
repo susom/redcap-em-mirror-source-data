@@ -50,7 +50,7 @@ class Master
      * if master is mirroring to multiple child projects. when changing child object check if want to update the notes for master based on previous child status
      * @var
      */
-    private $updateNotes;
+    public $updateNotes;
 
     private $migrationFields;
     /**
@@ -90,21 +90,6 @@ class Master
         $this->PREFIX;
     }
 
-    /**
-     * @return bool
-     */
-    public function isUpdateNotes(): bool
-    {
-        return $this->updateNotes;
-    }
-
-    /**
-     * @param bool $updateNotes
-     */
-    public function setUpdateNotes(bool $updateNotes): void
-    {
-        $this->updateNotes = $updateNotes;
-    }
 
 
 
