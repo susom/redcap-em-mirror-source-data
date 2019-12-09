@@ -165,7 +165,8 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
                         //exception when user is super user then add only the record to child dag mapped to the master dag
                         if (SUPER_USER && $dag['master'] == $group_id) {
-                            $final = $this->mirrorData($config);
+
+                            $this->getMaster()->setUpdateNotes($this->mirrorData($config));
                             $this->setUserInChildDag(true);
                         } else {
                             //check if user inside current dag
@@ -175,7 +176,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                                 continue;
                             } else {
 
-                                $final = $this->mirrorData($config);
+                                $this->getMaster()->setUpdateNotes($this->mirrorData($config));
                                 $this->setUserInChildDag(true);
                             }
                         }
@@ -186,12 +187,14 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                     }
                 } else {
                     $this->emDebug("config", $config);
-                    $final = $this->mirrorData($config);
+                    $this->getMaster()->setUpdateNotes($this->mirrorData($config));
                 }
             }
-            //when done sub-setting loop check if mirror completed if so run finilize mirror.
-            if ($final) {
+            //when done sub-setting loop check if mirror completed if so run finalize mirror.
+            if ($this->getMaster()->isUpdateNotes()) {
                 $this->finalizeMirrorProcess();
+                //so update is only done if true came from mirrordata function
+                $this->getMaster()->setUpdateNotes(false);
             }
         } catch (\LogicException $e) {
             echo $e->getMessage();
@@ -340,7 +343,13 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
              * before we change child object lets update parent notes using the child configuration.
              */
             if ($this->getChild() && $this->getChild()->getProjectId() != $config['child-project-id']) {
-                $this->finalizeMirrorProcess();
+                // we are holding the value on master object so when child object changed we check previous migration to previous child if succeeded.
+                if ($this->getMaster()->isUpdateNotes()) {
+                    $this->finalizeMirrorProcess();
+                }
+                $this->setChild(new Child($config['child-project-id'], $this->PREFIX));
+                //save configuration so when we are done with this child we can update parent note.
+                $this->getChild()->setConfig($config);
             } else {
                 $this->setChild(new Child($config['child-project-id'], $this->PREFIX));
                 //save configuration so when we are done with this child we can update parent note.
@@ -467,7 +476,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             $result = $this->getChild()->saveData($config, $this->getMaster(),
                 $this->getProjectSetting('child-save-record-hook'),
                 $this->getFirstEventId($this->getChild()->getProjectId()), $this->getDagId());
-            if ($result != true) {
+            if (is_array($result)) {
                 $msg = "Error creating record in CHILD project " . $this->getChild()->getProjectId() . " - ask administrator to review logs: " . print_r($result,
                         true);
                 $this->emError($msg);
@@ -476,6 +485,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
                 //update parent notes
                 $this->getMaster()->updateNotes($config, $msg, $data);
+                return false;
             }
         }
 
