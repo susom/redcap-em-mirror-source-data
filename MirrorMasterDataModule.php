@@ -344,7 +344,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
              */
             if ($this->getChild() && $this->getChild()->getProjectId() != $config['child-project-id']) {
                 // we are holding the value on master object so when child object changed we check previous migration to previous child if succeeded.
-                if ($this->getMaster()->isUpdateNotes()) {
+                if ($this->getMaster()->updateNotes) {
                     $this->finalizeMirrorProcess();
                 }
                 $this->setChild(new Child($config['child-project-id'], $this->PREFIX));
