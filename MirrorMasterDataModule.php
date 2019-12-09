@@ -166,7 +166,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                         //exception when user is super user then add only the record to child dag mapped to the master dag
                         if (SUPER_USER && $dag['master'] == $group_id) {
 
-                            $this->getMaster()->setUpdateNotes($this->mirrorData($config));
+                            $this->getMaster()->updateNotes = $this->mirrorData($config);
                             $this->setUserInChildDag(true);
                         } else {
                             //check if user inside current dag
@@ -176,7 +176,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                                 continue;
                             } else {
 
-                                $this->getMaster()->setUpdateNotes($this->mirrorData($config));
+                                $this->getMaster()->updateNotes = $this->mirrorData($config);
                                 $this->setUserInChildDag(true);
                             }
                         }
@@ -187,14 +187,14 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                     }
                 } else {
                     $this->emDebug("config", $config);
-                    $this->getMaster()->setUpdateNotes($this->mirrorData($config));
+                    $this->getMaster()->updateNotes = $this->mirrorData($config);
                 }
             }
             //when done sub-setting loop check if mirror completed if so run finalize mirror.
-            if ($this->getMaster()->isUpdateNotes()) {
+            if ($this->getMaster()->updateNotes) {
                 $this->finalizeMirrorProcess();
                 //so update is only done if true came from mirrordata function
-                $this->getMaster()->setUpdateNotes(false);
+                $this->getMaster()->updateNotes = false;
             }
         } catch (\LogicException $e) {
             echo $e->getMessage();

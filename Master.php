@@ -50,7 +50,7 @@ class Master
      * if master is mirroring to multiple child projects. when changing child object check if want to update the notes for master based on previous child status
      * @var
      */
-    private $updateNotes;
+    public $updateNotes;
 
     private $migrationFields;
     /**
@@ -88,22 +88,6 @@ class Master
          * this public so we do not have to modify emLoggerTrait
          */
         $this->PREFIX;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isUpdateNotes()
-    {
-        return $this->updateNotes;
-    }
-
-    /**
-     * @param bool $updateNotes
-     */
-    public function setUpdateNotes($updateNotes)
-    {
-        $this->updateNotes = $updateNotes;
     }
 
     /**
