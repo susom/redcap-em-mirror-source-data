@@ -93,7 +93,7 @@ class Master
     /**
      * @return bool
      */
-    public function isUpdateNotes(): bool
+    public function isUpdateNotes()
     {
         return $this->updateNotes;
     }
@@ -101,12 +101,10 @@ class Master
     /**
      * @param bool $updateNotes
      */
-    public function setUpdateNotes(bool $updateNotes): void
+    public function setUpdateNotes($updateNotes)
     {
         $this->updateNotes = $updateNotes;
     }
-
-
 
     /**
      * Bubble up status to user via the timestamp and notes field in the parent form
