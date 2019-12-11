@@ -367,6 +367,11 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             $this->getChild()->setEventName($config['child-event-name']);
 
             $this->getChild()->setEventId($this->getChild()->getProject()->getEventIdUsingUniqueEventName($config['child-event-name']));
+        } else {
+
+            # if no event is specified make sure child use the first event id for the case when pulling next record id.
+            $this->getChild()->setEventId($this->getFirstEventId($this->getChild()->getProjectId()));
+            $this->getChild()->setEventName(\REDCap::getEventNames(true, true, $this->getChild()->getEventId()));
         }
 
 
