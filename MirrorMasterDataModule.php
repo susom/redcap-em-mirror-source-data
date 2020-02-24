@@ -712,7 +712,11 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      */
     private function processMapDAGs($config, $key)
     {
-
+        # disabled for now because this might cause issues for projects with DAGs already configured. !!
+        # if enforce dags option not check ignore any saved
+        /*if(!$config['enforce-dag-configuration']){
+            return false;
+        }*/
         /**
          * if same dags names between master and child is checked:
          * 1. will check if map is defined manually for each dags in master and child
@@ -744,6 +748,14 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         } else {
             if ($config['master-child-dag-map']) {
                 foreach ($config['master-child-dag-map'] as $instanceKey => $instance) {
+
+                    # if master or child are null or false skip
+                    if (($this->getMasterDAGs()[$key][$instanceKey] == false || is_null($this->getMasterDAGs()[$key][$instanceKey])) || ($this->getProjectDAGID($config['child-project-id'],
+                                $this->getChildrenDAGs()[$key][$instanceKey]) == false || is_null($this->getProjectDAGID($config['child-project-id'],
+                                $this->getChildrenDAGs()[$key][$instanceKey])))) {
+                        continue;
+                    }
+
                     $dags[] = array(
                         "master" => $this->getMasterDAGs()[$key][$instanceKey],
                         "child" => $this->getProjectDAGID($config['child-project-id'],
