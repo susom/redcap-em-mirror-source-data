@@ -211,6 +211,9 @@ class Child
                         null
                     ));
             }
+
+            $this->migrateFiles($master);
+
             return true;
         }
     }
@@ -315,6 +318,28 @@ class Child
         }
     }
 
+    /**
+     * @param \Stanford\MirrorMasterDataModule\Master $master
+     */
+    private function migrateFiles($master){
+        $project = $master->getProject();
+        $masterFields = $project->metadata;
+        $record = $this->getRecord();
+        foreach ($record as $field => $value){
+            if($masterFields[$field]['element_type'] == 'file'){
+                $newDocId = copyFile($value, $this->getProjectId());
+                $projectId = $this->getProjectId();
+                $event = $this->getEventId();
+                $recordId = $this->getRecordId();
+
+                //Save file skip uploaded files values for some reason. so you need to save these values manually.
+                $sql = "insert into redcap_data (`value`, project_id, event_id, record, field_name) values ('$newDocId' , '{$projectId}', '{$event}','" . db_escape($recordId) . "','{$field}')";
+                db_query($sql);
+
+            }
+        }
+        $this->setRecord($record);
+    }
 
     /**
      * if dag is defined then put this id as fall back before run getChildRecordId which might change the reocrdi id based  on admin configuration
