@@ -237,6 +237,12 @@
           "type": "text"
         },
         {
+          "key": "child-field-for-migration-timestamp",
+          "name": "<h6><span class='text-lg badge badge-lg badge-danger'>LOG PARENT MIGRATION TIMESTAMP IN CHILD PROJECT</span></h6>If specified, the parent migration timestamp will be saved in this child field",
+          "required": false,
+          "type": "text"
+        },
+        {
           "key": "child-field-clobber",
           "name": "<h6><span class='text-lg badge badge-lg badge-secondary'>REDO/CLOBBER MIGRATION</span></h6>If checked, migration will be repeated on <b>each parent save</b>.<br><br>This can result in multiple records being created if New ID creation is set or existing data in the child project to be overwritten if TARGET ID is reused.",
           "required": false,

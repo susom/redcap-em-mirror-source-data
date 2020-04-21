@@ -105,6 +105,12 @@ class Child
         if (!empty($config['child-field-for-parent-id'])) {
             $record[$config['child-field-for-parent-id']] = $master->getRecordId();
         }
+
+        //enter logging field for child-field-for-migration-timestamp
+        if (!empty($config['child-field-for-migration-timestamp'])) {
+            $record[$config['child-field-for-migration-timestamp']] = date('Y-m-d H:i:s');
+        }
+
         $this->setRecord($record);
         //$this->emLog($newData, "SAVING THIS TO CHILD DATA");
 
