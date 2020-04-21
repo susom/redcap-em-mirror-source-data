@@ -19,6 +19,7 @@ use REDCap;
  * @property string $PREFIX
  * @property array $migrationFields
  * @property boolean $updateNotes
+ * @property string $surveyField
  *
  */
 class Master
@@ -46,6 +47,7 @@ class Master
 
     public $PREFIX;
 
+    private $surveyField;
     /**
      * if master is mirroring to multiple child projects. when changing child object check if want to update the notes for master based on previous child status
      * @var
@@ -134,6 +136,29 @@ class Master
 
     }
 
+    public function saveSurveyURL($config, $link)
+    {
+        if (!$this->getSurveyField()) {
+            $this->updateNotes($config,
+                'Child survey option is defined but no field in master defined to save the survey url. ');
+        } else {
+            $data[$this->getSurveyField()] = $link;
+            $data[REDCap::getRecordIdField()] = $this->getRecordId();
+            $this->emLog($data, "Saving Parent Survey Link");
+            $result = REDCap::saveData(
+                $this->getProjectId(),
+                'json',
+                json_encode(array($data)),
+                'overwrite');
+
+            // Check for upload errors
+            if (!empty($result['errors'])) {
+                $this->updateNotes($config,
+                    'Child survey option is defined but no field in master defined to save the survey url. ');
+                return false;
+            }
+        }
+    }
 
     /**
      * @return array
@@ -415,6 +440,22 @@ class Master
     public function setPrimaryKey($primaryKey)
     {
         $this->primaryKey = $primaryKey;
+    }
+
+    /**
+     * @return string
+     */
+    public function getSurveyField()
+    {
+        return $this->surveyField;
+    }
+
+    /**
+     * @param string $surveyField
+     */
+    public function setSurveyField($surveyField)
+    {
+        $this->surveyField = $surveyField;
     }
 
 

@@ -243,6 +243,32 @@
           "type": "text"
         },
         {
+          "key": "child-project-generate-survey",
+          "name": "<h6><span class='text-lg badge badge-lg badge-danger'>GENERATE A SURVEY ON CHILD FOR USER TO FILL</span></h6>If specified, the child project will generate new survey for the user to get redirect to.",
+          "required": false,
+          "type": "checkbox"
+        },
+        {
+          "key": "child-project-survey-instrument",
+          "name": "<h6><span class='text-lg badge badge-lg badge-danger'>DEFINE SURVEY INSTRUMENT IN CHILD PROJECT</span></h6>If specified, If child survey generator is checked EM will generate a survey from this instrument.",
+          "required": false,
+          "type": "text",
+          "branchingLogic": {
+            "field": "child-project-generate-survey",
+            "value": "1"
+          }
+        },
+        {
+          "key": "field-to-save-child-survey-url",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>FIELD IN MASTER TO STORE CHILD SURVEY URL</span></h6> If child survey generator is checked the new generated survey url will be saved in this field to user to get redirected to.</u>",
+          "required": false,
+          "type": "field-list",
+          "branchingLogic": {
+            "field": "child-project-generate-survey",
+            "value": "1"
+          }
+        },
+        {
           "key": "child-field-clobber",
           "name": "<h6><span class='text-lg badge badge-lg badge-secondary'>REDO/CLOBBER MIGRATION</span></h6>If checked, migration will be repeated on <b>each parent save</b>.<br><br>This can result in multiple records being created if New ID creation is set or existing data in the child project to be overwritten if TARGET ID is reused.",
           "required": false,

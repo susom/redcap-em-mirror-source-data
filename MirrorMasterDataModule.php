@@ -379,6 +379,19 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
          * set flag to be used later in the execution.
          */
         $this->getChild()->setFieldClobber($config['child-field-clobber']);
+
+
+        /**
+         * if checkbox is check to generate a survey for the user when mirroring is complete.
+         */
+        $this->getChild()->setGenerateSurvey($config['child-project-generate-survey']);
+
+        /**
+         * capture the instrument in child project where we will generate the survey and save the list to master.
+         */
+        if ($this->getChild()->isGenerateSurvey()) {
+            $this->getChild()->setSurvey($config['child-project-survey-instrument']);
+        }
     }
 
     /**
@@ -419,6 +432,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
         $this->getMaster()->setMigrationFields($config, $this->getChild());
 
+
         $this->emDebug("Intersection is " . count($this->getMaster()->getMigrationFields()));
 
         if (empty($this->getMaster()->getMigrationFields())) {
@@ -449,6 +463,22 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
 
         //set child object with other required parameters
         $this->initiateChildProject($config);
+
+
+        /**
+         * last thing if child has enabled to save survey and the survey is defined then we need to get get the field for master where to save the the survey url and throw error if not defined.
+         */
+        if ($this->getChild()->isGenerateSurvey() && $this->getChild()->getSurvey()) {
+            if ($config['field-to-save-child-survey-url'] == '') {
+                //update parent notes
+                $this->getMaster()->updateNotes($config,
+                    'Child survey option is defined but no field in master defined to save the survey url. ');
+
+                return false;
+            }
+
+            $this->getMaster()->setSurveyField($config['field-to-save-child-survey-url']);
+        }
 
         //prepare and validate required data for migration
         if (!$this->prepareMirrorData($config)) {

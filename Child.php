@@ -18,9 +18,11 @@ use REDCap;
  * @property string $primaryKey
  * @property boolean $fieldClobber
  * @property boolean $changeRecordId
+ * @property boolean $generateSurvey
  * @property array $config
  * @property string $PREFIX
  * @property string $dagRecordId
+ * @property string $survey
  */
 class Child
 {
@@ -54,6 +56,10 @@ class Child
     public $PREFIX;
 
     private $dagRecordId;
+
+    private $generateSurvey;
+
+    private $survey;
     /**
      * Master constructor.
      * @param $projectId
@@ -218,9 +224,30 @@ class Child
                     ));
             }
 
+
             $this->migrateFiles($master);
 
+            // check if any survey is defined and save link to master.
+            $this->processSurvey($config, $master);
+
             return true;
+        }
+    }
+
+    /**
+     * @param array $config
+     * @param \Stanford\MirrorMasterDataModule\Master $master
+     */
+    private function processSurvey($config, $master)
+    {
+        if ($this->isGenerateSurvey() && $this->getSurvey()) {
+            // lets generate survey url for the instrument we defined in the config.json
+            $link = \REDCap::getSurveyLink($this->getRecordId(), $this->getSurvey(), $this->getEventId(), 1,
+                $this->getProjectId());
+
+            $master->saveSurveyURL($config, $link);
+//            header('Location: ' . $link);
+//            exit;
         }
     }
 
@@ -703,6 +730,38 @@ class Child
     public function setPrefix($prefix)
     {
         $this->prefix = $prefix;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isGenerateSurvey()
+    {
+        return $this->generateSurvey;
+    }
+
+    /**
+     * @param bool $generateSurvey
+     */
+    public function setGenerateSurvey($generateSurvey)
+    {
+        $this->generateSurvey = $generateSurvey;
+    }
+
+    /**
+     * @return string
+     */
+    public function getSurvey()
+    {
+        return $this->survey;
+    }
+
+    /**
+     * @param string $survey
+     */
+    public function setSurvey($survey)
+    {
+        $this->survey = $survey;
     }
 
 }
