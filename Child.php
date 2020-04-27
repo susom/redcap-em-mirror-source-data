@@ -220,6 +220,9 @@ class Child
                         $this->getRecordId(),
                         filter_var($_GET['page'], FILTER_SANITIZE_STRING),
                         $this->getEventName(),
+                        null,
+                        null,
+                        null,
                         null
                     ));
             }
