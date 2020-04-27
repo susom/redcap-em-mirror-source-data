@@ -128,7 +128,7 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                 "REDCAP_EVENT_NAME: " . $this->getMaster()->getEventName());
 
             // Loop through each MMD Setting
-            $subSettings = $this->getSubSettings('mirror-instances');
+            $subSettings = $this->getSubSettings('mirror-instances', $project_id);
 
             //flag to run finalMirrorProcess
             $final = false;

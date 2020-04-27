@@ -219,7 +219,7 @@ class Child
                         $this->getProjectId(),
                         $this->getRecordId(),
                         filter_var($_GET['page'], FILTER_SANITIZE_STRING),
-                        $this->getEventName(),
+                        $this->getEventId(),
                         null,
                         null,
                         null,
