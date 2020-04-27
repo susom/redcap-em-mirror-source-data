@@ -243,6 +243,22 @@
           "type": "text"
         },
         {
+          "key": "child-save-record-hook",
+          "name": "<h6><span class='text-lg badge badge-lg badge-danger'>TRIGGER SAVE RECORD HOOK IN CHILD PROJECT</span></h6>If yes, redcap_save_hook will be triggered on child project after record save.",
+          "required": false,
+          "type": "dropdown",
+          "choices": [
+            {
+              "name": "No",
+              "value": "0"
+            },
+            {
+              "name": "Yes",
+              "value": "1"
+            }
+          ]
+        },
+        {
           "key": "child-project-generate-survey",
           "name": "<h6><span class='text-lg badge badge-lg badge-danger'>GENERATE A SURVEY ON CHILD FOR USER TO FILL</span></h6>If specified, the child project will generate new survey for the user to get redirect to.",
           "required": false,

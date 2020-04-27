@@ -204,7 +204,7 @@ class Child
                 //$this->setDAG(array_pop($result['ids']), $this->getDagId(), $childPid, $event_id);
             }
             // Call save_record hook on child?
-            if ($childSaveRecordHook) {
+            if ($childSaveRecordHook[0]) {
 
                 //last check if no event name is defined for child then use event id obtained to get event name
                 if (!$this->getEventName()) {
