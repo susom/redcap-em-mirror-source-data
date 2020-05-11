@@ -89,7 +89,7 @@ class Master
         /**
          * this public so we do not have to modify emLoggerTrait
          */
-        $this->PREFIX;
+        $this->PREFIX = $prefix;
     }
 
     /**
