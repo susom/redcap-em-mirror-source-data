@@ -108,6 +108,11 @@ class Master
             $parent_data[$config['migration-notes']] = $msg;
         }
 
+        // Don't overwrite the redirect url if it was just set!
+        if(!empty($config['field-to-save-child-survey-url'])) {
+            unset($parent_data[$config['field-to-save-child-survey-url']]);
+        }
+
         if (!empty($config['master-event-name'])) {
             //assuming that current event is the right event
             //$this->emLog("Event name from REDCap::getEventNames : $master_event / EVENT name from this->redcap_event_name: ".$this->redcap_event_name);
