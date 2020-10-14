@@ -218,9 +218,11 @@ class Child
                         $this->getEventId()));
                 }
 
+                $this->emDebug('About to call saveRecordHook in event ' . $this->getEventId() );
+
                 // REDCap Hook injection point: Pass project_id and record name to method
                 // \Hooks::call('redcap_save_record', array($childPid, $child_id, $_GET['page'], $child_event_name, $group_id, null, null, $_GET['instance']));
-                \Hooks::call('redcap_save_record',
+                $result = \Hooks::call('redcap_save_record',
                     array(
                         $this->getProjectId(),
                         $this->getRecordId(),
@@ -230,7 +232,12 @@ class Child
                         null,
                         null,
                         null
-                    ));
+                    )
+                );
+
+                $this->emDebug('MMD Save Record Hook Result',$result);
+            } else {
+                $this->emDebug('No save record hook');
             }
 
 
