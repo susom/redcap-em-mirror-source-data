@@ -207,6 +207,12 @@
           ]
         },
         {
+          "key": "child-next-id-increment",
+          "name": "<h6><span class='text-lg badge badge-lg badge-danger'>CHILD NEXT RECORD ID MODE</span></h6>Check this if you want to get the incremental of last record id to be last record id otherwise next id will be next available reocrd.",
+          "required": false,
+          "type": "checkbox"
+        },
+        {
           "key": "child-id-prefix",
           "name": "<span class='text-lg badge badge-lg badge-primary'>1. AUTO-INCREMENT CHILD ID OPTION</span><br><b>Add PREFIX to new CHILD ID</b><br>You can use specific words (e.g. STAN-). Or you can append DAG name or ID (e.g. [DAG:NAME]-, [DAG:ID]-).  Leave blank for no prefix",
           "required": false,

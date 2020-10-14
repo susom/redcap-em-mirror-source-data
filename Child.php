@@ -19,6 +19,7 @@ use REDCap;
  * @property boolean $fieldClobber
  * @property boolean $changeRecordId
  * @property boolean $generateSurvey
+ * @property boolean $incrementRecordId
  * @property array $config
  * @property string $PREFIX
  * @property string $dagRecordId
@@ -60,6 +61,9 @@ class Child
     private $generateSurvey;
 
     private $survey;
+
+    private $incrementRecordId = false;
+
     /**
      * Master constructor.
      * @param $projectId
@@ -68,7 +72,7 @@ class Child
      * @param null $instrument
      * @param null $dags
      */
-    public function __construct($projectId, $PREFIX)
+    public function __construct($projectId, $PREFIX, $incrementRecordId)
     {
         $this->setProjectId($projectId);
         /**
@@ -79,6 +83,8 @@ class Child
         $this->setProject(new \Project($this->getProjectId()));
 
         $this->setPrimaryKey($this->getProject()->table_pk);
+
+        $this->setIncrementRecordId($incrementRecordId);
     }
 
 
@@ -266,7 +272,7 @@ class Child
     {
         $q = \REDCap::getData($this->getProjectId(), 'array', null, array($this->getPrimaryKey()), $this->getEventId());
         //$this->emLog($q, "Found records in project $pid using $id_field");
-        $i = 1;
+        $i = $this->initiateRecordId($q, $prefix, $padding);
         do {
             // Make a padded number
             if ($padding) {
@@ -293,6 +299,24 @@ class Child
         $this->emLog("Next ID in project " . $this->getProjectId() . " for field " . $this->getPrimaryKey() . " is $id");
 
         return $id;
+    }
+
+    private function initiateRecordId($query, $prefix, $padding)
+    {
+        if ($this->isIncrementRecordId()) {
+
+            $id = array_keys($query)[count($query) - 1];
+            // first step is to remove prefix
+            $id = str_replace($prefix, '', $id);
+
+            // if padding exist then trim the id.
+            if ($padding) {
+                $id = ltrim('0', $id);
+            }
+
+            return $id;
+        }
+        return 1;
     }
 
     /**
@@ -766,5 +790,22 @@ class Child
     {
         $this->survey = $survey;
     }
+
+    /**
+     * @return bool
+     */
+    public function isIncrementRecordId()
+    {
+        return $this->incrementRecordId;
+    }
+
+    /**
+     * @param bool $incrementRecordId
+     */
+    public function setIncrementRecordId($incrementRecordId)
+    {
+        $this->incrementRecordId = $incrementRecordId;
+    }
+
 
 }

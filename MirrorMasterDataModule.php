@@ -347,11 +347,11 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                 if ($this->getMaster()->canUpdateNotes) {
                     $this->finalizeMirrorProcess();
                 }
-                $this->setChild(new Child($config['child-project-id'], $this->PREFIX));
+                $this->setChild(new Child($config['child-project-id'], $this->PREFIX, $config['child-next-id-increment']));
                 //save configuration so when we are done with this child we can update parent note.
                 $this->getChild()->setConfig($config);
             } else {
-                $this->setChild(new Child($config['child-project-id'], $this->PREFIX));
+                $this->setChild(new Child($config['child-project-id'], $this->PREFIX, $config['child-next-id-increment']));
                 //save configuration so when we are done with this child we can update parent note.
                 $this->getChild()->setConfig($config);
             }
