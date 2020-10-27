@@ -208,7 +208,7 @@
         },
         {
           "key": "child-next-id-increment",
-          "name": "<h6><span class='text-lg badge badge-lg badge-danger'>CHILD NEXT RECORD ID MODE</span></h6>Check this if you want to get the incremental of last record id to be last record id otherwise next id will be next available reocrd.",
+          "name": "<h6><span class='text-lg badge badge-lg badge-danger'>CHILD NEXT RECORD ID MODE</span></h6>Check this if you want to get the incremental of last record id to be record id. Otherwise next id will be next available record.",
           "required": false,
           "type": "checkbox"
         },
