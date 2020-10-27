@@ -312,7 +312,23 @@ class Child
     {
         if ($this->isIncrementRecordId()) {
 
-            $id = array_keys($query)[count($query) - 1];
+            // in case we have prefix we only want to records with that prefix not whole list.
+            if ($prefix) {
+                $array = array();
+                foreach (array_keys($query) as $item) {
+                    if (strncmp($item, $prefix, strlen($prefix)) === 0) {
+                        $array[] = $item;
+                    }
+                }
+                if (!empty($array)) {
+                    $id = $array[count($array) - 1];
+                } else {
+                    $id = 1;
+                }
+            } else {
+                $id = array_keys($query)[count($query) - 1];
+            }
+
             // first step is to remove prefix
             $id = str_replace($prefix, '', $id);
 
