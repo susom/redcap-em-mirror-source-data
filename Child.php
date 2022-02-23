@@ -123,6 +123,15 @@ class Child
             $record[$config['child-field-for-migration-timestamp']] = date('Y-m-d H:i:s');
         }
 
+        //if redcap_repeat_instrument and redcap_repeat_instance are blank then strip them.
+        if ((isset($record['redcap_repeat_instrument'])) && ($record['redcap_repeat_instrument'] == '')) {
+            unset($record['redcap_repeat_instrument']);
+
+            if ((isset($record['redcap_repeat_instance'])) && ($record['redcap_repeat_instance'] == '')) {
+                unset($record['redcap_repeat_instance']);
+            }
+        }
+
         $this->setRecord($record);
         //$this->emLog($newData, "SAVING THIS TO CHILD DATA");
 
@@ -171,7 +180,7 @@ class Child
 
         // Check for upload errors
         if (!empty($result['errors'])) {
-            return $result['errors'];
+            return $result['errors']; // this is a string, not an array
         } else {
             /**
              * let check if parent record is in a DAG, if so lets find the corresponding Child DAG and update the data accordingly
