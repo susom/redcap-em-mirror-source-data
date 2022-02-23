@@ -124,10 +124,10 @@ class Child
         }
 
         //if redcap_repeat_instrument and redcap_repeat_instance are blank then strip them.
-        if ($record['redcap_repeat_instrument'] == '') {
+        if ((isset($record['redcap_repeat_instrument'])) && ($record['redcap_repeat_instrument'] == '')) {
             unset($record['redcap_repeat_instrument']);
 
-            if ($record['redcap_repeat_instance'] == '') {
+            if ((isset($record['redcap_repeat_instance'])) && ($record['redcap_repeat_instance'] == '')) {
                 unset($record['redcap_repeat_instance']);
             }
         }
