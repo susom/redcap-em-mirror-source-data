@@ -512,7 +512,14 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
             $result = $this->getChild()->saveData($config, $this->getMaster(),
                 $this->getProjectSetting('child-save-record-hook'),
                 $this->getFirstEventId($this->getChild()->getProjectId()), $this->getDagId());
-            if (is_array($result)) {
+
+            //if (is_array($result)) {
+            //3 possible returns for result:
+            //  1. Error string if error while saving (not an array)
+            //  2. false if fails while handling a dag
+            //  3. true if passes
+            //report error if anything but a pass
+            if ($result !== true) {
                 $msg = "Error creating record in CHILD project " . $this->getChild()->getProjectId() . " - ask administrator to review logs: " . print_r($result,
                         true);
                 $this->emError($msg);
