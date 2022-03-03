@@ -188,18 +188,15 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
                 } else {
                     $this->emDebug("config", $config);
                     $this->getMaster()->canUpdateNotes = $this->mirrorData($config);
+                    //when done sub-setting loop check if mirror completed if so run finalize mirror.
+                    if ($this->getMaster()->canUpdateNotes) {
+                        $this->finalizeMirrorProcess();
+                        //so update is only done if true came from mirrordata function
+                        $this->getMaster()->canUpdateNotes = false;
+                    }
                 }
             }
-            //when done sub-setting loop check if mirror completed if so run finalize mirror.
-            if ($this->getMaster()->canUpdateNotes) {
-                $this->finalizeMirrorProcess();
-                //so update is only done if true came from mirrordata function
-                $this->getMaster()->canUpdateNotes = false;
-            } else {
-                if ($this->getMaster()->getProjectId() == 19800) {
-                    $this->emLog($this->getMaster()->getRecord());
-                }
-            }
+
         } catch (\LogicException $e) {
             echo $e->getMessage();
         } catch (\Exception $e) {
