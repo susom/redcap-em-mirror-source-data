@@ -356,6 +356,15 @@ class Master
         $this->dags = $dags;
     }
 
+
+    /**
+     * @return array
+     */
+    public function resetRecord()
+    {
+        $this->record = null;
+    }
+
     /**
      * @return array
      */

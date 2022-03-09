@@ -402,6 +402,8 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
     private function prepareMirrorData($config)
     {
 
+        //reset the amster record to null
+        $this->getMaster()->resetRecord();
 
         //0. CHECK if in right EVENT (only applies if master-event-name is not null)
         $this->setTriggerEvent($config['master-event-name']);
