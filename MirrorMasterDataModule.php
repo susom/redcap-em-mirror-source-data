@@ -322,15 +322,20 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
         $master = $this->getMaster()->getRecord();
         $config = $this->getChild()->getConfig();
         $msg = "Successfully migrated.";
+
+        //$master has all the record fields, resaving won't work with randomization
+        // so limit it to the migration notes field
+        $log_data = array();
+        $log_data[REDCap::getRecordIdField()] = $this->getRecordId();
         if (!empty($config['parent-field-for-child-id'])) {
-            $master[$config['parent-field-for-child-id']] = $this->getChild()->getRecordId();
+            $log_data[$config['parent-field-for-child-id']] = $this->getChild()->getRecordId();
         }
         if (!empty($config['migration-timestamp'])) {
-            $master[$config['migration-timestamp']] = date('Y-m-d H:i:s');
+            $log_data[$config['migration-timestamp']] = date('Y-m-d H:i:s');
         }
 
         //7. UPDATE PARENT Note
-        $this->getMaster()->updateNotes($config, $msg, $master);
+        $this->getMaster()->updateNotes($config, $msg, $log_data);
     }
 
     /**
