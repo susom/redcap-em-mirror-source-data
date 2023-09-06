@@ -120,15 +120,17 @@ class Master
         }
 
         //$this->emLog($parent_data, "Saving Parent Data");
-        $result = REDCap::saveData(
-            $this->getProjectId(),
-            'json',
-            json_encode(array($parent_data)),
-            'overwrite');
+        $params = [
+            "project_id" => $this->getProject(),
+            "data_format" => 'json',
+            "data" => json_encode([$parent_data]),
+            "overwriteBehavior" => 'overwrite'
+        ];
+        $result = REDCap::saveData($params);
 
         // Check for upload errors
         if (!empty($result['errors'])) {
-            $msg = "Error creating record in PARENT project " . $this->getProjectId() . " - ask administrator to review logs: " . json_encode($result);
+            $msg = "Error creating record in PARENT project " . $this->getProjectId() . " - ask administrator to review logs: " . json_encode($result) . " - " . json_encode($params);
             //$sr->updateFinalReviewNotes($msg);
             //todo: bubble up to user : should this be sent to logging?
             $this->emError($msg);
