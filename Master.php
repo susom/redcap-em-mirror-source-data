@@ -119,14 +119,25 @@ class Master
             $parent_data['redcap_event_name'] = $this->getEventName(); //$config['master-event-name'];
         }
 
-        //$this->emLog($parent_data, "Saving Parent Data");
+        /**
+        //This works, why is change broken?
+        $this->emLog($parent_data, "Saving Parent Data");
+        $result = REDCap::saveData(
+        $this->getProjectId(),
+        'json',
+        json_encode(array($parent_data)),
+        'overwrite');
+         *
+         */
+
         $params = [
             "project_id" => $this->getProject(),
-            "data_format" => 'json',
-            "data" => json_encode([$parent_data]),
+            "dataFormat" => 'json',
+            "data" => json_encode(array($parent_data)),
             "overwriteBehavior" => 'overwrite'
         ];
         $result = REDCap::saveData($params);
+        //$this->emLog($parent_data, "Saving Parent Data");
 
         // Check for upload errors
         if (!empty($result['errors'])) {
