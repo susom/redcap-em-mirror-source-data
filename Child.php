@@ -201,7 +201,8 @@ class Child
                     $fieldName = '__GROUPID__';
                     $childPid = $this->getProjectId();
                     $eventId = $this->getEventId();
-                    db_query("INSERT INTO redcap_data (project_id, event_id, record, field_name, value) VALUES ($childPid, $eventId, '$record', '$fieldName', '$value')");
+                    $data_table = method_exists('\REDCap', 'getDataTable') ? \REDCap::getDataTable($childPid) : "redcap_data";
+                    db_query("INSERT INTO $data_table (project_id, event_id, record, field_name, value) VALUES ($childPid, $eventId, '$record', '$fieldName', '$value')");
 
                     //get child event arm to be used to update id for the dropdown
                     $arm = $this->getArm();
@@ -423,9 +424,10 @@ class Child
                 $projectId = $this->getProjectId();
                 $event = $this->getEventId();
                 $recordId = $this->getRecordId();
+                $data_table = method_exists('\REDCap', 'getDataTable') ? \REDCap::getDataTable($projectId) : "redcap_data";
 
                 //Save file skip uploaded files values for some reason. so you need to save these values manually.
-                $sql = "insert into redcap_data (`value`, project_id, event_id, record, field_name) values ('$newDocId' , '{$projectId}', '{$event}','" . db_escape($recordId) . "','{$field}')";
+                $sql = "insert into $data_table (`value`, project_id, event_id, record, field_name) values ('$newDocId' , '{$projectId}', '{$event}','" . db_escape($recordId) . "','{$field}')";
                 db_query($sql);
 
             }
@@ -440,7 +442,9 @@ class Child
      */
     private function getNextRecordDAGID($childProjectId, $dagId)
     {
-        $sql = "SELECT MAX(record) as recordId FROM redcap_data WHERE field_name = '__GROUPID__' AND `value` = $dagId AND project_id = '$childProjectId'";
+        $data_table = method_exists('\REDCap', 'getDataTable') ? \REDCap::getDataTable($childProjectId) : "redcap_data";
+
+        $sql = "SELECT MAX(record) as recordId FROM $data_table WHERE field_name = '__GROUPID__' AND `value` = $dagId AND project_id = '$childProjectId'";
         $q = db_query($sql);
 
         $row = db_fetch_row($q);
