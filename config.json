@@ -154,7 +154,7 @@
             },
             {
               "name": "Migrate only specified PARENT form",
-              "value": "migrate-parent-form"
+              "value": "migrate-source-form"
             }
           ]
         },
