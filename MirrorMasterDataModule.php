@@ -229,7 +229,8 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      */
     private function isUserInDAG($projectId, $username, $group_id)
     {
-        $sql = "SELECT username FROM redcap_user_rights WHERE username = '$username' AND group_id = $group_id AND project_id = $projectId";
+        $sql = sprintf("SELECT username FROM redcap_user_rights WHERE username = '%s' AND group_id = %s AND project_id = %s", db_escape($username), db_escape($group_id), db_escape($projectId));
+        //$sql = "SELECT username FROM redcap_user_rights WHERE username = '$username' AND group_id = $group_id AND project_id = $projectId";
         $q = db_query($sql);
 
         $row = db_fetch_row($q);
@@ -550,7 +551,8 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      */
     public static function getProjectDAGName($projectId, $id)
     {
-        $sql = "SELECT group_name FROM redcap_data_access_groups WHERE project_id = '$projectId' AND group_id = '$id'";
+        $sql = sprintf("SELECT group_name FROM redcap_data_access_groups WHERE project_id = %s AND group_id = '%s'", db_escape($projectId), db_escape($id));
+        //$sql = "SELECT group_name FROM redcap_data_access_groups WHERE project_id = '$projectId' AND group_id = '$id'";
         $q = db_query($sql);
 
         if (db_num_rows($q) > 0) {
@@ -569,7 +571,8 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
      */
     private function getProjectDAGID($projectId, $name)
     {
-        $sql = "SELECT group_id FROM redcap_data_access_groups WHERE project_id = '$projectId' AND group_name = '$name'";
+        $sql = sprintf("SELECT group_id FROM redcap_data_access_groups WHERE project_id = %s AND group_name = '%s'", db_escape($projectId), db_escape($name));
+        //$sql = "SELECT group_id FROM redcap_data_access_groups WHERE project_id = '$projectId' AND group_name = '$name'";
         $q = db_query($sql);
 
         if (db_num_rows($q) > 0) {
@@ -589,9 +592,10 @@ class MirrorMasterDataModule extends \ExternalModules\AbstractExternalModule
     private function getProjectDags($projectId, $name = null)
     {
         if (is_null($name)) {
-            $sql = "SELECT * FROM redcap_data_access_groups WHERE  project_id = $projectId";
+            $sql = sprintf("SELECT * FROM redcap_data_access_groups WHERE  project_id = %s", db_escape($projectId));
         } else {
-            $sql = "SELECT * FROM redcap_data_access_groups WHERE LOWER(group_name) = '$name' AND project_id = $projectId";
+            $sql = sprintf("SELECT * FROM redcap_data_access_groups WHERE LOWER(group_name) = '%s' AND  project_id = %s", db_escape($name), db_escape($projectId));
+            //$sql = "SELECT * FROM redcap_data_access_groups WHERE LOWER(group_name) = '$name' AND project_id = $projectId";
         }
 
         $q = db_query($sql);
