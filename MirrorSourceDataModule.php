@@ -32,7 +32,7 @@ class MirrorSourceDataModule extends \ExternalModules\AbstractExternalModule
 
     /*
 
-    AM- If you already have a value for the destination_id in the parent project and you have clobber on, should you
+    AM- If you already have a value for the destination_id in the source project and you have clobber on, should you
     just update or create another destination record with a new id?
 
 
@@ -40,7 +40,7 @@ class MirrorSourceDataModule extends \ExternalModules\AbstractExternalModule
      */
     use emLoggerTrait;
 
-    // PARENT INFO
+    // SOURCE INFO
     /**
      * @var Source
      */
@@ -251,18 +251,18 @@ class MirrorSourceDataModule extends \ExternalModules\AbstractExternalModule
         //$this->emLog("Found trigger form ". $trigger_form);
 
         //1. CHECK if migration has already been completed
-        $parent_fields = array_filter(array(
+        $source_fields = array_filter(array(
             $config['migration-timestamp'],
-            $config['parent-field-for-destination-id']
+            $config['source-field-for-destination-id']
         ));
 
-        $results = REDCap::getData('json', $this->getSource()->getRecordId(), $parent_fields);
+        $results = REDCap::getData('json', $this->getSource()->getRecordId(), $source_fields);
         $results = json_decode($results, true);
-        $parentData = current($results);
+        $sourceData = current($results);
 
         //check if timestamp and destination_id are set (both? just one?)
         //if exists, then don't do anything since already migrated
-        $migrationTimestamp = $parentData[$config['migration-timestamp']];
+        $migrationTimestamp = $sourceData[$config['migration-timestamp']];
 
         $destination_field_clobber = $config['destination-field-clobber'];
 
@@ -275,10 +275,10 @@ class MirrorSourceDataModule extends \ExternalModules\AbstractExternalModule
 
             // //reset the migration timestamp and destination_id
             //$log_data = array();
-            //$log_data[$config['parent-field-for-destination-id']] = '';
+            //$log_data[$config['source-field-for-destination-id']] = '';
             //$log_data[$config['migration-timestamp']] = date('Y-m-d H:i:s');
             //
-            // //UPDATE PARENT LOG
+            // //UPDATE SOURCE LOG
             // This was to-do added by Andy so I added it to update source record that migration did not happened because it already done before.
             $this->getSource()->updateNotes($config, $message);
 
@@ -328,14 +328,14 @@ class MirrorSourceDataModule extends \ExternalModules\AbstractExternalModule
         // so limit it to the migration notes field
         $log_data = array();
         $log_data[REDCap::getRecordIdField()] = $this->getRecordId();
-        if (!empty($config['parent-field-for-destination-id'])) {
-            $log_data[$config['parent-field-for-destination-id']] = $this->getDestination()->getRecordId();
+        if (!empty($config['source-field-for-destination-id'])) {
+            $log_data[$config['source-field-for-destination-id']] = $this->getDestination()->getRecordId();
         }
         if (!empty($config['migration-timestamp'])) {
             $log_data[$config['migration-timestamp']] = date('Y-m-d H:i:s');
         }
 
-        //7. UPDATE PARENT Note
+        //7. UPDATE SOURCE Note
         $this->getSource()->updateNotes($config, $msg, $log_data);
     }
 
@@ -347,7 +347,7 @@ class MirrorSourceDataModule extends \ExternalModules\AbstractExternalModule
         //set destination id and project object if destination not defined or destination-project-id is different from current destination-project-id
         if (!$this->getDestination() || $this->getDestination()->getProjectId() != $config['destination-project-id']) {
             /**
-             * before we change destination object lets update parent notes using the destination configuration.
+             * before we change destination object lets update source notes using the destination configuration.
              */
             if ($this->getDestination() && $this->getDestination()->getProjectId() != $config['destination-project-id']) {
                 // we are holding the value on source object so when destination object changed we check previous migration to previous destination if succeeded.
@@ -355,11 +355,11 @@ class MirrorSourceDataModule extends \ExternalModules\AbstractExternalModule
                     $this->finalizeMirrorProcess();
                 }
                 $this->setDestination(new Destination($config['destination-project-id'], $this->PREFIX, $config['destination-next-id-increment']));
-                //save configuration so when we are done with this destination we can update parent note.
+                //save configuration so when we are done with this destination we can update source note.
                 $this->getDestination()->setConfig($config);
             } else {
                 $this->setDestination(new Destination($config['destination-project-id'], $this->PREFIX, $config['destination-next-id-increment']));
-                //save configuration so when we are done with this destination we can update parent note.
+                //save configuration so when we are done with this destination we can update source note.
                 $this->getDestination()->setConfig($config);
             }
         } else {
@@ -446,14 +446,14 @@ class MirrorSourceDataModule extends \ExternalModules\AbstractExternalModule
 
         if (empty($this->getSource()->getMigrationFields())) {
             //Log msg in Notes field
-            $msg = "There were no intersect fields between the parent (" . $this->getSource()->getProjectId() .
+            $msg = "There were no intersect fields between the source (" . $this->getSource()->getProjectId() .
                 ") and destination projects (" . $this->getDestination()->getProjectId() . ").";
             $this->emDebug($msg);
             //reset the migration timestamp and destination_id
 
             // TODO: ABM - I DONT UNDERSTAND WHY WE RESET HERE?
             $log_data = array();
-            $log_data[$config['parent-field-for-destination-id']] = '';
+            $log_data[$config['source-field-for-destination-id']] = '';
             $log_data[$config['migration-timestamp']] = date('Y-m-d H:i:s');
             $this->getSource()->updateNotes($config, $msg, $log_data);
             return false;
@@ -479,7 +479,7 @@ class MirrorSourceDataModule extends \ExternalModules\AbstractExternalModule
          */
         if ($this->getDestination()->isGenerateSurvey() && $this->getDestination()->getSurvey()) {
             if ($config['field-to-save-destination-survey-url'] == '') {
-                //update parent notes
+                //update source notes
                 $this->getSource()->updateNotes($config,
                     'Destination survey option is defined but no field in source defined to save the survey url. ');
 
@@ -498,9 +498,9 @@ class MirrorSourceDataModule extends \ExternalModules\AbstractExternalModule
         //find out type of Destination record then set it.
         $this->getDestination()->prepareDestinationRecord($config, $this->getSource(), $this->getDagId());
 
-        // $this->emDebug("DATA FROM PARENT INTERSECT FIELDS", $parentData);
+        // $this->emDebug("DATA FROM SOURCE INTERSECT FIELDS", $sourceData);
 
-        //5.5 Determine the ID in the CHILD project.
+        //5.5 Determine the ID in the DESTINATION project.
         $this->getDestination()->prepareRecordId($config, $this->getSource(), $this->getDagId());
 
 
@@ -510,7 +510,7 @@ class MirrorSourceDataModule extends \ExternalModules\AbstractExternalModule
             $msg = "Error creating record in TARGET project. ";
             $msg .= "Target ID, " . $this->getDestination()->getRecordId() . ", already exists in Destination project " . $this->getDestination()->getProjectId() . " and clobber is set to false (" . $this->getDestination()->isFieldClobber() . ").";
             $this->emDebug($msg);
-            //update parent notes
+            //update source notes
             $this->getSource()->updateNotes($config, $msg);
             return false;
         } else {
@@ -528,13 +528,13 @@ class MirrorSourceDataModule extends \ExternalModules\AbstractExternalModule
             //  3. true if passes
             //report error if anything but a pass
             if ($result !== true) {
-                $msg = "Error creating record in CHILD project " . $this->getDestination()->getProjectId() . " - ask administrator to review logs: " . print_r($result,
+                $msg = "Error creating record in DESTINATION project " . $this->getDestination()->getProjectId() . " - ask administrator to review logs: " . print_r($result,
                         true);
                 $this->emError($msg);
-                $this->emError("CHILD ERROR", $result);
+                $this->emError("DESTINATION ERROR", $result);
                 $data[$config['migration-notes']] = $msg;
 
-                //update parent notes
+                //update source notes
                 $this->getSource()->updateNotes($config, $msg, $data);
                 return false;
             }

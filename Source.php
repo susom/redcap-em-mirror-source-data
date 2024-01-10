@@ -93,39 +93,39 @@ class Source
     }
 
     /**
-     * Bubble up status to user via the timestamp and notes field in the parent form
+     * Bubble up status to user via the timestamp and notes field in the source form
      * in config file as 'migration-notes'
      * @param $config : config fields for migration module
      * @param $msg : Message to enter into Notes field
-     * @param $parent_data : If destination migration successful, data about migration to destination (else leave as null)
+     * @param $source_data : If destination migration successful, data about migration to destination (else leave as null)
      * @return bool        : return fail/pass status of save data
      */
-    public function updateNotes($config, $msg, $parent_data = array())
+    public function updateNotes($config, $msg, $source_data = array())
     {
-        //$this->emLog($parent_data, "DEBUG", "RECEIVED THIS DATA");
-        $parent_data[$this->getPrimaryKey()] = $this->getRecordId();
+        //$this->emLog($source_data, "DEBUG", "RECEIVED THIS DATA");
+        $source_data[$this->getPrimaryKey()] = $this->getRecordId();
         if (isset($config['migration-notes'])) {
-            $parent_data[$config['migration-notes']] = $msg;
+            $source_data[$config['migration-notes']] = $msg;
         }
 
         // Don't overwrite the redirect url if it was just set!
         if(!empty($config['field-to-save-destination-survey-url'])) {
-            unset($parent_data[$config['field-to-save-destination-survey-url']]);
+            unset($source_data[$config['field-to-save-destination-survey-url']]);
         }
 
         if (!empty($config['source-event-name'])) {
             //assuming that current event is the right event
             //$this->emLog("Event name from REDCap::getEventNames : $source_event / EVENT name from this->redcap_event_name: ".$this->redcap_event_name);
-            $parent_data['redcap_event_name'] = $this->getEventName(); //$config['source-event-name'];
+            $source_data['redcap_event_name'] = $this->getEventName(); //$config['source-event-name'];
         }
 
         /**
         //This works, why is change broken?
-        $this->emLog($parent_data, "Saving Parent Data");
+        $this->emLog($source_data, "Saving Source Data");
         $result = REDCap::saveData(
         $this->getProjectId(),
         'json',
-        json_encode(array($parent_data)),
+        json_encode(array($source_data)),
         'overwrite');
          *
          */
@@ -133,19 +133,19 @@ class Source
         $params = [
             "project_id" => $this->getProject(),
             "dataFormat" => 'json',
-            "data" => json_encode(array($parent_data)),
+            "data" => json_encode(array($source_data)),
             "overwriteBehavior" => 'overwrite'
         ];
         $result = REDCap::saveData($params);
-        //$this->emLog($parent_data, "Saving Parent Data");
+        //$this->emLog($source_data, "Saving Source Data");
 
         // Check for upload errors
         if (!empty($result['errors'])) {
-            $msg = "Error creating record in PARENT project " . $this->getProjectId() . " - ask administrator to review logs: " . json_encode($result) . " - " . json_encode($params);
+            $msg = "Error creating record in SOURCE project " . $this->getProjectId() . " - ask administrator to review logs: " . json_encode($result) . " - " . json_encode($params);
             //$sr->updateFinalReviewNotes($msg);
             //todo: bubble up to user : should this be sent to logging?
             $this->emError($msg);
-            $this->emError("RESULT OF PARENT: " . print_r($result, true));
+            $this->emError("RESULT OF SOURCE: " . print_r($result, true));
             //logEvent($description, $changes_made="", $sql="", $record=null, $event_id=null, $project_id=null);
             REDCap::logEvent("Mirror Source Data Module", $msg, null, $this->getRecordId(),
                 $config['source-event-name']);
@@ -162,7 +162,7 @@ class Source
         } else {
             $data[$this->getSurveyField()] = $link;
             $data[REDCap::getRecordIdField()] = $this->getRecordId();
-            $this->emLog($data, "Saving Parent Survey Link");
+            $this->emLog($data, "Saving Source Survey Link");
             $result = REDCap::saveData(
                 $this->getProjectId(),
                 'json',
@@ -228,8 +228,8 @@ class Source
 
                 $arrFields = array_intersect($sourceFields, $destinationFields);
                 break;
-            case 'migrate-parent-form':
-                $sourceFields = array_keys($this->getProject()->forms[$config['include-only-form-parent']]['fields']);
+            case 'migrate-source-form':
+                $sourceFields = array_keys($this->getProject()->forms[$config['include-only-form-source']]['fields']);
                 //remove last field which is complete because its does not exist in the source project
                 $sourceFields = $this->removeLastField($sourceFields);
 

@@ -99,7 +99,7 @@ class Destination
     {
         //$this->emDebug("PROCEED: Target $destinationId does not exists (" . count($target_results) . ") in $destination_pid or clobber true ($destination_field_clobber).");
 
-        //5. SET UP CHILD PROJECT TO SAVE DATA
+        //5. SET UP DESTINATION PROJECT TO SAVE DATA
         //GET logging variables from target project
 
 
@@ -113,9 +113,9 @@ class Destination
             $record['redcap_event_name'] = ($this->getEventName());
         }
 
-        //enter logging field for destination-field-for-parent-id
-        if (!empty($config['destination-field-for-parent-id'])) {
-            $record[$config['destination-field-for-parent-id']] = $source->getRecordId();
+        //enter logging field for destination-field-for-source-id
+        if (!empty($config['destination-field-for-source-id'])) {
+            $record[$config['destination-field-for-source-id']] = $source->getRecordId();
         }
 
         //enter logging field for destination-field-for-migration-timestamp
@@ -133,9 +133,9 @@ class Destination
         }
 
         $this->setRecord($record);
-        //$this->emLog($newData, "SAVING THIS TO CHILD DATA");
+        //$this->emLog($newData, "SAVING THIS TO DESTINATION DATA");
 
-        //6. UPDATE CHILD: Upload the data to destination project
+        //6. UPDATE DESTINATION: Upload the data to destination project
 
         // $result = REDCap::saveData(
         //     $destination_pid,
@@ -147,7 +147,7 @@ class Destination
         /*$args = array(
             0 => $this->getDestinationProjectId(),
             1 => 'json',
-            2 => json_encode(array($parentData)),
+            2 => json_encode(array($sourceData)),
             3 => ($config['destination-field-clobber'] == '1') ? 'overwrite' : 'normal',
             4 => 'YMD',
             5 => 'flat',
@@ -183,7 +183,7 @@ class Destination
             return $result['errors']; // this is a string, not an array
         } else {
             /**
-             * let check if parent record is in a DAG, if so lets find the corresponding Destination DAG and update the data accordingly
+             * let check if source record is in a DAG, if so lets find the corresponding Destination DAG and update the data accordingly
              */
             if (($config['same-dags-name'] || !empty($config['source-destination-dag-map'])) && !empty($dagId)) {
 
@@ -391,7 +391,7 @@ class Destination
     public function prepareDestinationRecord($config, $source, $dagId = null)
     {
         /**
-         * let check if parent record is in a DAG, if so lets find the corresponding Destination DAG and update the data accordingly
+         * let check if source record is in a DAG, if so lets find the corresponding Destination DAG and update the data accordingly
          */
         // if (($config['same-dags-name'] || !empty($config['source-destination-dag-map'])) && strpos($source->getRecordId(),'-') !== false && $this->getDestination()->isChangeRecordId()) {
         if (($config['same-dags-name'] || !empty($config['source-destination-dag-map'])) && !empty($dagId) && $this->isChangeRecordId()) {
@@ -469,7 +469,7 @@ class Destination
     {
         $destinationId = null;
 
-        // Method for creating the destination id (destination-id-create-new, destination-id-like-parent, destination-id-parent-specified)
+        // Method for creating the destination id (destination-id-create-new, destination-id-like-source, destination-id-source-specified)
         $destinationIdSelect = $config['destination-id-select'];
 
         //get primary key for TARGET project
@@ -478,23 +478,23 @@ class Destination
         //$this->emDebug($source->getRecordId(), $this->getProjectId(), $destinationIdSelect, $destinationPrimaryKey);
         $destinationId = '';
         switch ($destinationIdSelect) {
-            case 'destination-id-like-parent':
+            case 'destination-id-like-source':
                 $destinationId = $source->getRecordId();
                 break;
-            case 'destination-id-parent-specified':
-                $destination_id_parent_specified_field = $config['destination-id-parent-specified-field'];
+            case 'destination-id-source-specified':
+                $destination_id_source_specified_field = $config['destination-id-source-specified-field'];
 
-                //get data from parent for the value in this field
+                //get data from source for the value in this field
                 $results = REDCap::getData('json', $source->getRecordId(),
-                    array($destination_id_parent_specified_field),
+                    array($destination_id_source_specified_field),
                     $source->getEventName());
                 $results = json_decode($results, true);
                 $existing_target_data = current($results);
 
-                $destinationId = $existing_target_data[$destination_id_parent_specified_field];
-                $this->emDebug($existing_target_data, $destination_id_parent_specified_field,
+                $destinationId = $existing_target_data[$destination_id_source_specified_field];
+                $this->emDebug($existing_target_data, $destination_id_source_specified_field,
                     $this->getRecordId(),
-                    "PARENT SPECIFIED CHILD ID: " . $this->getRecordId());
+                    "SOURCE SPECIFIED DESTINATION ID: " . $this->getRecordId());
                 break;
             case 'destination-id-create-new':
 
