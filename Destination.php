@@ -1,12 +1,12 @@
 <?php
 
-namespace Stanford\MirrorMasterDataModule;
+namespace Stanford\MirrorSourceDataModule;
 
 use REDCap;
 
 /**
- * Class Child
- * @package Stanford\MirrorMasterDataModule
+ * Class Destination
+ * @package Stanford\MirrorSourceDataModule
  * @property int $projectId
  * @property \Project $project
  * @property int $eventId
@@ -25,7 +25,7 @@ use REDCap;
  * @property string $dagRecordId
  * @property string $survey
  */
-class Child
+class Destination
 {
 
     use emLoggerTrait;
@@ -65,7 +65,7 @@ class Child
     private $incrementRecordId = false;
 
     /**
-     * Master constructor.
+     * Source constructor.
      * @param $projectId
      * @param null $eventId
      * @param null $recordId
@@ -90,14 +90,14 @@ class Child
 
     /**
      * @param $config
-     * @param \Stanford\MirrorMasterDataModule\Master $master
-     * @param $childSaveRecordHook
+     * @param \Stanford\MirrorSourceDataModule\Source $source
+     * @param $destinationSaveRecordHook
      * @param null $dagId
      * @return bool
      */
-    public function saveData($config, $master, $childSaveRecordHook, $firstEvetnId, $dagId = null)
+    public function saveData($config, $source, $destinationSaveRecordHook, $firstEvetnId, $dagId = null)
     {
-        //$this->emDebug("PROCEED: Target $childId does not exists (" . count($target_results) . ") in $child_pid or clobber true ($child_field_clobber).");
+        //$this->emDebug("PROCEED: Target $destinationId does not exists (" . count($target_results) . ") in $destination_pid or clobber true ($destination_field_clobber).");
 
         //5. SET UP CHILD PROJECT TO SAVE DATA
         //GET logging variables from target project
@@ -108,19 +108,19 @@ class Child
         $record = $this->getRecord();
         $record[$this->getPrimaryKey()] = $this->getRecordId();
 
-        //if child event id defined add it to child record
+        //if destination event id defined add it to destination record
         if (!empty($this->getEventName())) {
             $record['redcap_event_name'] = ($this->getEventName());
         }
 
-        //enter logging field for child-field-for-parent-id
-        if (!empty($config['child-field-for-parent-id'])) {
-            $record[$config['child-field-for-parent-id']] = $master->getRecordId();
+        //enter logging field for destination-field-for-parent-id
+        if (!empty($config['destination-field-for-parent-id'])) {
+            $record[$config['destination-field-for-parent-id']] = $source->getRecordId();
         }
 
-        //enter logging field for child-field-for-migration-timestamp
-        if (!empty($config['child-field-for-migration-timestamp'])) {
-            $record[$config['child-field-for-migration-timestamp']] = date('Y-m-d H:i:s');
+        //enter logging field for destination-field-for-migration-timestamp
+        if (!empty($config['destination-field-for-migration-timestamp'])) {
+            $record[$config['destination-field-for-migration-timestamp']] = date('Y-m-d H:i:s');
         }
 
         //if redcap_repeat_instrument and redcap_repeat_instance are blank then strip them.
@@ -135,20 +135,20 @@ class Child
         $this->setRecord($record);
         //$this->emLog($newData, "SAVING THIS TO CHILD DATA");
 
-        //6. UPDATE CHILD: Upload the data to child project
+        //6. UPDATE CHILD: Upload the data to destination project
 
         // $result = REDCap::saveData(
-        //     $child_pid,
+        //     $destination_pid,
         //     'json',
         //     json_encode(array($newData)),
-        //     (($child_field_clobber == '1') ? 'overwrite' : 'normal'));
+        //     (($destination_field_clobber == '1') ? 'overwrite' : 'normal'));
 
         // IN ORDER TO BE ABLE TO COPY CAT INSTRUMENTS WE ARE GOING TO USE THE UNDERLYING RECORDS SAVE METHOD INSTEAD OF REDCAP METHOD:
         /*$args = array(
-            0 => $this->getChildProjectId(),
+            0 => $this->getDestinationProjectId(),
             1 => 'json',
             2 => json_encode(array($parentData)),
-            3 => ($config['child-field-clobber'] == '1') ? 'overwrite' : 'normal',
+            3 => ($config['destination-field-clobber'] == '1') ? 'overwrite' : 'normal',
             4 => 'YMD',
             5 => 'flat',
             6 => null,
@@ -165,7 +165,7 @@ class Child
             17 => true
         );*/
 
-        //save child record (This can be moved to child object (whoever review this what do you think))
+        //save destination record (This can be moved to destination object (whoever review this what do you think))
         $result = \REDCap::saveData($this->getProjectId(),
             'json',
             json_encode(array($this->getRecord())),
@@ -183,12 +183,12 @@ class Child
             return $result['errors']; // this is a string, not an array
         } else {
             /**
-             * let check if parent record is in a DAG, if so lets find the corresponding Child DAG and update the data accordingly
+             * let check if parent record is in a DAG, if so lets find the corresponding Destination DAG and update the data accordingly
              */
-            if (($config['same-dags-name'] || !empty($config['master-child-dag-map'])) && !empty($dagId)) {
+            if (($config['same-dags-name'] || !empty($config['source-destination-dag-map'])) && !empty($dagId)) {
 
                 try {
-                    //get first event in case child event name is not  defined.
+                    //get first event in case destination event name is not  defined.
                     if ($this->getEventName() == "" || $this->getEventName() == null) {
                         $this->setEventId($firstEvetnId);
                         //at this point no need for event name because everything is saved we just want to save dag information
@@ -199,30 +199,30 @@ class Child
                     $record = $this->getRecordId();
                     $value = $dagId;
                     $fieldName = '__GROUPID__';
-                    $childPid = $this->getProjectId();
+                    $destinationPid = $this->getProjectId();
                     $eventId = $this->getEventId();
-                    $data_table = method_exists('\REDCap', 'getDataTable') ? \REDCap::getDataTable($childPid) : "redcap_data";
-                    db_query("INSERT INTO $data_table (project_id, event_id, record, field_name, value) VALUES ($childPid, $eventId, '$record', '$fieldName', '$value')");
+                    $data_table = method_exists('\REDCap', 'getDataTable') ? \REDCap::getDataTable($destinationPid) : "redcap_data";
+                    db_query("INSERT INTO $data_table (project_id, event_id, record, field_name, value) VALUES ($destinationPid, $eventId, '$record', '$fieldName', '$value')");
 
-                    //get child event arm to be used to update id for the dropdown
+                    //get destination event arm to be used to update id for the dropdown
                     $arm = $this->getArm();
 
                     //just update record list. only for Record Status Dashboard dropdown
-                    db_query("UPDATE redcap_record_list SET dag_id = '$value' WHERE project_id = $childPid and arm = $arm and record = '$record'");
+                    db_query("UPDATE redcap_record_list SET dag_id = '$value' WHERE project_id = $destinationPid and arm = $arm and record = '$record'");
 
 
                 } catch (\Exception $e) {
                     $msg = $e->getMessage();
-                    $master->updateNotes($config, $msg);
+                    $source->updateNotes($config, $msg);
                     return false;
                 }
                 //
-                //$this->setDAG(array_pop($result['ids']), $this->getDagId(), $childPid, $event_id);
+                //$this->setDAG(array_pop($result['ids']), $this->getDagId(), $destinationPid, $event_id);
             }
-            // Call save_record hook on child?
-            if ($childSaveRecordHook[0]) {
+            // Call save_record hook on destination?
+            if ($destinationSaveRecordHook[0]) {
 
-                //last check if no event name is defined for child then use event id obtained to get event name
+                //last check if no event name is defined for destination then use event id obtained to get event name
                 if (!$this->getEventName()) {
                     $this->setEventName(\REDCap::getEventNames(true, true,
                         $this->getEventId()));
@@ -231,7 +231,7 @@ class Child
                 $this->emDebug('About to call saveRecordHook in event ' . $this->getEventId() );
 
                 // REDCap Hook injection point: Pass project_id and record name to method
-                // \Hooks::call('redcap_save_record', array($childPid, $child_id, $_GET['page'], $child_event_name, $group_id, null, null, $_GET['instance']));
+                // \Hooks::call('redcap_save_record', array($destinationPid, $destination_id, $_GET['page'], $destination_event_name, $group_id, null, null, $_GET['instance']));
                 $result = \Hooks::call('redcap_save_record',
                     array(
                         $this->getProjectId(),
@@ -251,10 +251,10 @@ class Child
             }
 
 
-            $this->migrateFiles($master);
+            $this->migrateFiles($source);
 
-            // check if any survey is defined and save link to master.
-            $this->processSurvey($config, $master);
+            // check if any survey is defined and save link to source.
+            $this->processSurvey($config, $source);
 
             return true;
         }
@@ -262,16 +262,16 @@ class Child
 
     /**
      * @param array $config
-     * @param \Stanford\MirrorMasterDataModule\Master $master
+     * @param \Stanford\MirrorSourceDataModule\Source $source
      */
-    private function processSurvey($config, $master)
+    private function processSurvey($config, $source)
     {
         if ($this->isGenerateSurvey() && $this->getSurvey()) {
             // lets generate survey url for the instrument we defined in the config.json
             $link = \REDCap::getSurveyLink($this->getRecordId(), $this->getSurvey(), $this->getEventId(), 1,
                 $this->getProjectId());
 
-            $master->saveSurveyURL($config, $link);
+            $source->saveSurveyURL($config, $link);
 //            header('Location: ' . $link);
 //            exit;
         }
@@ -353,7 +353,7 @@ class Child
     }
 
     /**
-     * check if child record already saved before
+     * check if destination record already saved before
      * @return bool
      */
     public function isRecordIdExist()
@@ -368,7 +368,7 @@ class Child
     }
 
     /**
-     * get child arm for current event
+     * get destination arm for current event
      * @return bool|int
      */
     public function getArm()
@@ -385,41 +385,41 @@ class Child
 
     /**
      * @param $config
-     * @param \Stanford\MirrorMasterDataModule\Master $master
+     * @param \Stanford\MirrorSourceDataModule\Source $source
      * @param null $dagId
      */
-    public function prepareChildRecord($config, $master, $dagId = null)
+    public function prepareDestinationRecord($config, $source, $dagId = null)
     {
         /**
-         * let check if parent record is in a DAG, if so lets find the corresponding Child DAG and update the data accordingly
+         * let check if parent record is in a DAG, if so lets find the corresponding Destination DAG and update the data accordingly
          */
-        // if (($config['same-dags-name'] || !empty($config['master-child-dag-map'])) && strpos($master->getRecordId(),'-') !== false && $this->getChild()->isChangeRecordId()) {
-        if (($config['same-dags-name'] || !empty($config['master-child-dag-map'])) && !empty($dagId) && $this->isChangeRecordId()) {
-            //set child record id based on dag information saved inside the hook
+        // if (($config['same-dags-name'] || !empty($config['source-destination-dag-map'])) && strpos($source->getRecordId(),'-') !== false && $this->getDestination()->isChangeRecordId()) {
+        if (($config['same-dags-name'] || !empty($config['source-destination-dag-map'])) && !empty($dagId) && $this->isChangeRecordId()) {
+            //set destination record id based on dag information saved inside the hook
             $this->setRecordId($this->getNextRecordDAGID($this->getProjectId(), $dagId));
 
-            //set child record based on master record
-            $record = $master->getRecord();
+            //set destination record based on source record
+            $record = $source->getRecord();
 
-            //modify record id in value to use same value we got in the above tow lines them set the child record
+            //modify record id in value to use same value we got in the above tow lines them set the destination record
             $record[$this->getPrimaryKey()] = $this->getRecordId();
             $this->setRecord($record);
 
         } else {
-            //make sure the record we are saving into child project is the one we pulled from master. with specified fields.
-            $this->setRecord($master->getRecord());
+            //make sure the record we are saving into destination project is the one we pulled from source. with specified fields.
+            $this->setRecord($source->getRecord());
         }
     }
 
     /**
-     * @param \Stanford\MirrorMasterDataModule\Master $master
+     * @param \Stanford\MirrorSourceDataModule\Source $source
      */
-    private function migrateFiles($master){
-        $project = $master->getProject();
-        $masterFields = $project->metadata;
+    private function migrateFiles($source){
+        $project = $source->getProject();
+        $sourceFields = $project->metadata;
         $record = $this->getRecord();
         foreach ($record as $field => $value){
-            if($masterFields[$field]['element_type'] == 'file'){
+            if($sourceFields[$field]['element_type'] == 'file'){
                 $newDocId = copyFile($value, $this->getProjectId());
                 $projectId = $this->getProjectId();
                 $event = $this->getEventId();
@@ -436,15 +436,15 @@ class Child
     }
 
     /**
-     * if dag is defined then put this id as fall back before run getChildRecordId which might change the reocrdi id based  on admin configuration
+     * if dag is defined then put this id as fall back before run getDestinationRecordId which might change the reocrdi id based  on admin configuration
      * @param int $dagId
      * @return int
      */
-    private function getNextRecordDAGID($childProjectId, $dagId)
+    private function getNextRecordDAGID($destinationProjectId, $dagId)
     {
-        $data_table = method_exists('\REDCap', 'getDataTable') ? \REDCap::getDataTable($childProjectId) : "redcap_data";
+        $data_table = method_exists('\REDCap', 'getDataTable') ? \REDCap::getDataTable($destinationProjectId) : "redcap_data";
 
-        $sql = "SELECT MAX(record) as recordId FROM $data_table WHERE field_name = '__GROUPID__' AND `value` = $dagId AND project_id = '$childProjectId'";
+        $sql = "SELECT MAX(record) as recordId FROM $data_table WHERE field_name = '__GROUPID__' AND `value` = $dagId AND project_id = '$destinationProjectId'";
         $q = db_query($sql);
 
         $row = db_fetch_row($q);
@@ -460,87 +460,87 @@ class Child
 
 
     /**
-     * this function will set child record id(which might already be set by getNextRecordDAGID) in case configuration is different
+     * this function will set destination record id(which might already be set by getNextRecordDAGID) in case configuration is different
      * @param $config
-     * @param \Stanford\MirrorMasterDataModule\Master $master
+     * @param \Stanford\MirrorSourceDataModule\Source $source
      * @return bool
      */
-    public function prepareRecordId($config, $master, $dagId = null)
+    public function prepareRecordId($config, $source, $dagId = null)
     {
-        $childId = null;
+        $destinationId = null;
 
-        // Method for creating the child id (child-id-create-new, child-id-like-parent, child-id-parent-specified)
-        $childIdSelect = $config['child-id-select'];
+        // Method for creating the destination id (destination-id-create-new, destination-id-like-parent, destination-id-parent-specified)
+        $destinationIdSelect = $config['destination-id-select'];
 
         //get primary key for TARGET project
-        $childPrimaryKey = $this->getPrimaryKey();
+        $destinationPrimaryKey = $this->getPrimaryKey();
 
-        //$this->emDebug($master->getRecordId(), $this->getProjectId(), $childIdSelect, $childPrimaryKey);
-        $childId = '';
-        switch ($childIdSelect) {
-            case 'child-id-like-parent':
-                $childId = $master->getRecordId();
+        //$this->emDebug($source->getRecordId(), $this->getProjectId(), $destinationIdSelect, $destinationPrimaryKey);
+        $destinationId = '';
+        switch ($destinationIdSelect) {
+            case 'destination-id-like-parent':
+                $destinationId = $source->getRecordId();
                 break;
-            case 'child-id-parent-specified':
-                $child_id_parent_specified_field = $config['child-id-parent-specified-field'];
+            case 'destination-id-parent-specified':
+                $destination_id_parent_specified_field = $config['destination-id-parent-specified-field'];
 
                 //get data from parent for the value in this field
-                $results = REDCap::getData('json', $master->getRecordId(),
-                    array($child_id_parent_specified_field),
-                    $master->getEventName());
+                $results = REDCap::getData('json', $source->getRecordId(),
+                    array($destination_id_parent_specified_field),
+                    $source->getEventName());
                 $results = json_decode($results, true);
                 $existing_target_data = current($results);
 
-                $childId = $existing_target_data[$child_id_parent_specified_field];
-                $this->emDebug($existing_target_data, $child_id_parent_specified_field,
+                $destinationId = $existing_target_data[$destination_id_parent_specified_field];
+                $this->emDebug($existing_target_data, $destination_id_parent_specified_field,
                     $this->getRecordId(),
                     "PARENT SPECIFIED CHILD ID: " . $this->getRecordId());
                 break;
-            case 'child-id-create-new':
+            case 'destination-id-create-new':
 
-                //if child record id is was set from previous iteration of sub-setting loop then use that instead so the data is saved to save record
+                //if destination record id is was set from previous iteration of sub-setting loop then use that instead so the data is saved to save record
                 if ($this->isChangeRecordId()) {
-                    $childIdPrefix = $config['child-id-prefix'];
-                    $childIDPadding = $config['child-id-padding'];
+                    $destinationIdPrefix = $config['destination-id-prefix'];
+                    $destinationIDPadding = $config['destination-id-padding'];
 
                     /**
                      * in case we are adding to DAG just keep whatever we already retrieved
                      */
                     if ($this->getDagRecordId() != null) {
-                        $childId = $this->getDagRecordId();
+                        $destinationId = $this->getDagRecordId();
                         // Make a padded number
-                        if ($childIDPadding) {
+                        if ($destinationIDPadding) {
                             // make sure we haven't exceeded padding, pad of 2 means
                             //$max = 10^$padding;
-                            $max = 10 ** $childIDPadding;
-                            if ($childId >= $max) {
-                                $this->emLog("Error - $childId exceeds max of $max permitted by padding of $childIDPadding characters");
+                            $max = 10 ** $destinationIDPadding;
+                            if ($destinationId >= $max) {
+                                $this->emLog("Error - $destinationId exceeds max of $max permitted by padding of $destinationIDPadding characters");
                                 return false;
                             }
-                            $childId = str_pad($childId, $childIDPadding, "0", STR_PAD_LEFT);
+                            $destinationId = str_pad($destinationId, $destinationIDPadding, "0", STR_PAD_LEFT);
                             //$this->emLog("Padded to $padding for $i is $id");
                         }
                         //does prefix is wrapped with square brackets ? if so build the custom prefix.
-                        preg_match("/\[.*?\]/", $childIdPrefix, $matches);
+                        preg_match("/\[.*?\]/", $destinationIdPrefix, $matches);
                         if (!empty($matches)) {
                             $string = $matches[0];
                             $string = str_replace(array('[', ']'), '', $string);
                             $parts = explode(":", $string);
                             $r = $this->buildCustomPrefix($parts[0], end($parts), $this->getProjectId(), $dagId);
-                            $childIdPrefix = str_replace($matches[0], $r, $childIdPrefix);
+                            $destinationIdPrefix = str_replace($matches[0], $r, $destinationIdPrefix);
                         }
-                        $childId = $childIdPrefix . $childId;
+                        $destinationId = $destinationIdPrefix . $destinationId;
                     } else {
-                        //get next id from child project
-                        $childId = $this->getNextRecordId($childIdPrefix, $childIDPadding);
+                        //get next id from destination project
+                        $destinationId = $this->getNextRecordId($destinationIdPrefix, $destinationIDPadding);
                     }
                 }
                 break;
             default:
-                $childId = $this->getNextRecordId();
+                $destinationId = $this->getNextRecordId();
         }
 
-        $this->setRecordId($childId);
+        $this->setRecordId($destinationId);
     }
 
 
@@ -558,7 +558,7 @@ class Child
             case 'dag':
                 switch (strtolower($field)) {
                     case 'name':
-                        return MirrorMasterDataModule::getProjectDAGName($projectId, $value);
+                        return MirrorSourceDataModule::getProjectDAGName($projectId, $value);
                         break;
                     case 'id':
                         return $value;
