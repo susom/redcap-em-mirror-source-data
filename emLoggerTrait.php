@@ -1,6 +1,6 @@
 <?php
-namespace Stanford\MirrorMasterDataModule;
-/** @var \Stanford\MirrorMasterDataModule\MirrorMasterDataModule $this */
+namespace Stanford\MirrorSourceDataModule;
+/** @var \Stanford\MirrorSourceDataModule\MirrorSourceDataModule $this */
 
 
 /**

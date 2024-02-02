@@ -2,14 +2,14 @@
 <ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:redcap="https://projectredcap.org"
      xsi:schemaLocation="http://www.cdisc.org/ns/odm/v1.3 schema/odm/ODM1-3-1.xsd" ODMVersion="1.3.1"
-     FileOID="000-00-0000" FileType="Snapshot" Description="Sample Child" AsOfDateTime="2019-10-04T12:32:53"
+     FileOID="000-00-0000" FileType="Snapshot" Description="Sample Destination" AsOfDateTime="2019-10-04T12:32:53"
      CreationDateTime="2019-10-04T12:32:53" SourceSystem="REDCap" SourceSystemVersion="9.2.5">
-    <Study OID="Project.SampleChild">
+    <Study OID="Project.SampleDestination">
         <GlobalVariables>
-            <StudyName>Sample Child</StudyName>
-            <StudyDescription>This file contains the metadata, events, and data for REDCap project "Sample Child".
+            <StudyName>Sample Destination</StudyName>
+            <StudyDescription>This file contains the metadata, events, and data for REDCap project "Sample Destination".
             </StudyDescription>
-            <ProtocolName>Sample Child</ProtocolName>
+            <ProtocolName>Sample Destination</ProtocolName>
             <redcap:RecordAutonumberingEnabled>1</redcap:RecordAutonumberingEnabled>
             <redcap:CustomRecordLabel></redcap:CustomRecordLabel>
             <redcap:SecondaryUniqueField></redcap:SecondaryUniqueField>
@@ -23,7 +23,7 @@
                 <redcap:DataAccessGroups group_name="Sample DAG"/>
             </redcap:DataAccessGroupsGroup>
         </GlobalVariables>
-        <MetaDataVersion OID="Metadata.SampleChild_2019-10-04_1232" Name="Sample Child"
+        <MetaDataVersion OID="Metadata.SampleDestination_2019-10-04_1232" Name="Sample Destination"
                          redcap:RecordIdField="record_id">
             <Protocol>
                 <StudyEventRef StudyEventOID="Event.name_arm_1" OrderNumber="1" Mandatory="No"/>
@@ -32,31 +32,31 @@
             <StudyEventDef OID="Event.name_arm_1" Name="Name" Type="Common" Repeating="No" redcap:EventName="Name"
                            redcap:CustomEventLabel="" redcap:UniqueEventName="name_arm_1" redcap:ArmNum="1"
                            redcap:ArmName="Arm 1" redcap:DayOffset="1" redcap:OffsetMin="0" redcap:OffsetMax="0">
-                <FormRef FormOID="Form.child_instrument" OrderNumber="1" Mandatory="No"
-                         redcap:FormName="child_instrument"/>
+                <FormRef FormOID="Form.destination_instrument" OrderNumber="1" Mandatory="No"
+                         redcap:FormName="destination_instrument"/>
             </StudyEventDef>
             <StudyEventDef OID="Event.dob_arm_1" Name="DOB" Type="Common" Repeating="No" redcap:EventName="DOB"
                            redcap:CustomEventLabel="" redcap:UniqueEventName="dob_arm_1" redcap:ArmNum="1"
                            redcap:ArmName="Arm 1" redcap:DayOffset="2" redcap:OffsetMin="0" redcap:OffsetMax="0">
                 <FormRef FormOID="Form.date_of_birth" OrderNumber="1" Mandatory="No" redcap:FormName="date_of_birth"/>
             </StudyEventDef>
-            <FormDef OID="Form.child_instrument" Name="Child Instrument" Repeating="No"
-                     redcap:FormName="child_instrument">
-                <ItemGroupRef ItemGroupOID="child_instrument.record_id" Mandatory="No"/>
-                <ItemGroupRef ItemGroupOID="child_instrument.child_instrument_complete" Mandatory="No"/>
+            <FormDef OID="Form.destination_instrument" Name="Destination Instrument" Repeating="No"
+                     redcap:FormName="destination_instrument">
+                <ItemGroupRef ItemGroupOID="destination_instrument.record_id" Mandatory="No"/>
+                <ItemGroupRef ItemGroupOID="destination_instrument.destination_instrument_complete" Mandatory="No"/>
             </FormDef>
             <FormDef OID="Form.date_of_birth" Name="Date of Birth" Repeating="No" redcap:FormName="date_of_birth">
                 <ItemGroupRef ItemGroupOID="date_of_birth.date_of_birth" Mandatory="No"/>
                 <ItemGroupRef ItemGroupOID="date_of_birth.date_of_birth_complete" Mandatory="No"/>
             </FormDef>
-            <ItemGroupDef OID="child_instrument.record_id" Name="Child Instrument" Repeating="No">
+            <ItemGroupDef OID="destination_instrument.record_id" Name="Destination Instrument" Repeating="No">
                 <ItemRef ItemOID="record_id" Mandatory="No" redcap:Variable="record_id"/>
                 <ItemRef ItemOID="first_name" Mandatory="No" redcap:Variable="first_name"/>
                 <ItemRef ItemOID="last_name" Mandatory="No" redcap:Variable="last_name"/>
             </ItemGroupDef>
-            <ItemGroupDef OID="child_instrument.child_instrument_complete" Name="Form Status" Repeating="No">
-                <ItemRef ItemOID="child_instrument_complete" Mandatory="No"
-                         redcap:Variable="child_instrument_complete"/>
+            <ItemGroupDef OID="destination_instrument.destination_instrument_complete" Name="Form Status" Repeating="No">
+                <ItemRef ItemOID="destination_instrument_complete" Mandatory="No"
+                         redcap:Variable="destination_instrument_complete"/>
             </ItemGroupDef>
             <ItemGroupDef OID="date_of_birth.date_of_birth" Name="Date of Birth" Repeating="No">
                 <ItemRef ItemOID="date_of_birth" Mandatory="No" redcap:Variable="date_of_birth"/>
@@ -82,13 +82,13 @@
                     <TranslatedText>Last Name</TranslatedText>
                 </Question>
             </ItemDef>
-            <ItemDef OID="child_instrument_complete" Name="child_instrument_complete" DataType="text" Length="1"
-                     redcap:Variable="child_instrument_complete" redcap:FieldType="select"
+            <ItemDef OID="destination_instrument_complete" Name="destination_instrument_complete" DataType="text" Length="1"
+                     redcap:Variable="destination_instrument_complete" redcap:FieldType="select"
                      redcap:SectionHeader="Form Status">
                 <Question>
                     <TranslatedText>Complete?</TranslatedText>
                 </Question>
-                <CodeListRef CodeListOID="child_instrument_complete.choices"/>
+                <CodeListRef CodeListOID="destination_instrument_complete.choices"/>
             </ItemDef>
             <ItemDef OID="date_of_birth" Name="date_of_birth" DataType="datetime" Length="999"
                      redcap:Variable="date_of_birth" redcap:FieldType="text"
@@ -105,8 +105,8 @@
                 </Question>
                 <CodeListRef CodeListOID="date_of_birth_complete.choices"/>
             </ItemDef>
-            <CodeList OID="child_instrument_complete.choices" Name="child_instrument_complete" DataType="text"
-                      redcap:Variable="child_instrument_complete">
+            <CodeList OID="destination_instrument_complete.choices" Name="destination_instrument_complete" DataType="text"
+                      redcap:Variable="destination_instrument_complete">
                 <CodeListItem CodedValue="0">
                     <Decode>
                         <TranslatedText>Incomplete</TranslatedText>

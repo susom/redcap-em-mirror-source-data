@@ -1,12 +1,12 @@
 <?php
 
-namespace Stanford\MirrorMasterDataModule;
+namespace Stanford\MirrorSourceDataModule;
 
 use REDCap;
 
 /**
- * Class Master
- * @package Stanford\MirrorMasterDataModule
+ * Class Source
+ * @package Stanford\MirrorSourceDataModule
  * @property int $projectId
  * @property \Project $project
  * @property int $eventId
@@ -22,7 +22,7 @@ use REDCap;
  * @property string $surveyField
  *
  */
-class Master
+class Source
 {
 
     use emLoggerTrait;
@@ -49,14 +49,14 @@ class Master
 
     private $surveyField;
     /**
-     * if master is mirroring to multiple child projects. when changing child object check if want to update the notes for master based on previous child status
+     * if source is mirroring to multiple destination projects. when changing destination object check if want to update the notes for source based on previous destination status
      * @var
      */
     public $canUpdateNotes;
 
     private $migrationFields;
     /**
-     * Master constructor.
+     * Source constructor.
      * @param $projectId
      * @param $eventId
      * @param null $recordId
@@ -93,39 +93,39 @@ class Master
     }
 
     /**
-     * Bubble up status to user via the timestamp and notes field in the parent form
+     * Bubble up status to user via the timestamp and notes field in the source form
      * in config file as 'migration-notes'
      * @param $config : config fields for migration module
      * @param $msg : Message to enter into Notes field
-     * @param $parent_data : If child migration successful, data about migration to child (else leave as null)
+     * @param $source_data : If destination migration successful, data about migration to destination (else leave as null)
      * @return bool        : return fail/pass status of save data
      */
-    public function updateNotes($config, $msg, $parent_data = array())
+    public function updateNotes($config, $msg, $source_data = array())
     {
-        //$this->emLog($parent_data, "DEBUG", "RECEIVED THIS DATA");
-        $parent_data[$this->getPrimaryKey()] = $this->getRecordId();
+        //$this->emLog($source_data, "DEBUG", "RECEIVED THIS DATA");
+        $source_data[$this->getPrimaryKey()] = $this->getRecordId();
         if (isset($config['migration-notes'])) {
-            $parent_data[$config['migration-notes']] = $msg;
+            $source_data[$config['migration-notes']] = $msg;
         }
 
         // Don't overwrite the redirect url if it was just set!
-        if(!empty($config['field-to-save-child-survey-url'])) {
-            unset($parent_data[$config['field-to-save-child-survey-url']]);
+        if(!empty($config['field-to-save-destination-survey-url'])) {
+            unset($source_data[$config['field-to-save-destination-survey-url']]);
         }
 
-        if (!empty($config['master-event-name'])) {
+        if (!empty($config['source-event-name'])) {
             //assuming that current event is the right event
-            //$this->emLog("Event name from REDCap::getEventNames : $master_event / EVENT name from this->redcap_event_name: ".$this->redcap_event_name);
-            $parent_data['redcap_event_name'] = $this->getEventName(); //$config['master-event-name'];
+            //$this->emLog("Event name from REDCap::getEventNames : $source_event / EVENT name from this->redcap_event_name: ".$this->redcap_event_name);
+            $source_data['redcap_event_name'] = $this->getEventName(); //$config['source-event-name'];
         }
 
         /**
         //This works, why is change broken?
-        $this->emLog($parent_data, "Saving Parent Data");
+        $this->emLog($source_data, "Saving Source Data");
         $result = REDCap::saveData(
         $this->getProjectId(),
         'json',
-        json_encode(array($parent_data)),
+        json_encode(array($source_data)),
         'overwrite');
          *
          */
@@ -133,22 +133,22 @@ class Master
         $params = [
             "project_id" => $this->getProject(),
             "dataFormat" => 'json',
-            "data" => json_encode(array($parent_data)),
+            "data" => json_encode(array($source_data)),
             "overwriteBehavior" => 'overwrite'
         ];
         $result = REDCap::saveData($params);
-        //$this->emLog($parent_data, "Saving Parent Data");
+        //$this->emLog($source_data, "Saving Source Data");
 
         // Check for upload errors
         if (!empty($result['errors'])) {
-            $msg = "Error creating record in PARENT project " . $this->getProjectId() . " - ask administrator to review logs: " . json_encode($result) . " - " . json_encode($params);
+            $msg = "Error creating record in SOURCE project " . $this->getProjectId() . " - ask administrator to review logs: " . json_encode($result) . " - " . json_encode($params);
             //$sr->updateFinalReviewNotes($msg);
             //todo: bubble up to user : should this be sent to logging?
             $this->emError($msg);
-            $this->emError("RESULT OF PARENT: " . print_r($result, true));
+            $this->emError("RESULT OF SOURCE: " . print_r($result, true));
             //logEvent($description, $changes_made="", $sql="", $record=null, $event_id=null, $project_id=null);
-            REDCap::logEvent("Mirror Master Data Module", $msg, null, $this->getRecordId(),
-                $config['master-event-name']);
+            REDCap::logEvent("Mirror Source Data Module", $msg, null, $this->getRecordId(),
+                $config['source-event-name']);
             return false;
         }
 
@@ -158,11 +158,11 @@ class Master
     {
         if (!$this->getSurveyField()) {
             $this->updateNotes($config,
-                'Child survey option is defined but no field in master defined to save the survey url. ');
+                'Destination survey option is defined but no field in source defined to save the survey url. ');
         } else {
             $data[$this->getSurveyField()] = $link;
             $data[REDCap::getRecordIdField()] = $this->getRecordId();
-            $this->emLog($data, "Saving Parent Survey Link");
+            $this->emLog($data, "Saving Source Survey Link");
             $result = REDCap::saveData(
                 $this->getProjectId(),
                 'json',
@@ -172,7 +172,7 @@ class Master
             // Check for upload errors
             if (!empty($result['errors'])) {
                 $this->updateNotes($config,
-                    'Child survey option is defined but no field in master defined to save the survey url. ');
+                    'Destination survey option is defined but no field in source defined to save the survey url. ');
                 return false;
             }
         }
@@ -187,55 +187,55 @@ class Master
     }
 
     /**
-     * based on configuration find out the field will be migrated from master project into child project
+     * based on configuration find out the field will be migrated from source project into destination project
      * @param $config
-     * @param \Stanford\MirrorMasterDataModule\Child $child
+     * @param \Stanford\MirrorSourceDataModule\Destination $destination
      */
-    public function setMigrationFields($config, $child)
+    public function setMigrationFields($config, $destination)
     {
 
         $arrFields = array();
         //branching logic reset does not clear out old values - force clear here
         switch ($config['fields-to-migrate']) {
             case 'migrate-intersect':
-                //get master instrument for current event
-                $masterFields = $this->getProjectFields($this);
+                //get source instrument for current event
+                $sourceFields = $this->getProjectFields($this);
 
-                $childFields = $this->getProjectFields($child);
+                $destinationFields = $this->getProjectFields($destination);
 
-                $arrFields = array_intersect($masterFields, $childFields);
+                $arrFields = array_intersect($sourceFields, $destinationFields);
                 break;
             case 'migrate-intersect-specified':
-                //get master instrument for current event
-                $masterFields = $this->getProjectFields($this);
+                //get source instrument for current event
+                $sourceFields = $this->getProjectFields($this);
 
-                $childFields = $this->getProjectFields($child);
+                $destinationFields = $this->getProjectFields($destination);
 
                 //get all fields
-                $arrFields = array_intersect($masterFields, $childFields);
+                $arrFields = array_intersect($sourceFields, $destinationFields);
 
                 //intersect with included only.
                 $arrFields = array_intersect($arrFields, $config['include-only-fields']);
 
                 break;
-            case 'migrate-child-form':
-                $masterFields = array_keys($child->getProject()->forms[$config['include-only-form-child']]['fields']);
-                //remove last field which is complete because its does not exist in the child project
-                $masterFields = $this->removeLastField($masterFields);
+            case 'migrate-destination-form':
+                $sourceFields = array_keys($destination->getProject()->forms[$config['include-only-form-destination']]['fields']);
+                //remove last field which is complete because its does not exist in the destination project
+                $sourceFields = $this->removeLastField($sourceFields);
 
 
-                $childFields = $this->getProjectFields($child);
+                $destinationFields = $this->getProjectFields($destination);
 
-                $arrFields = array_intersect($masterFields, $childFields);
+                $arrFields = array_intersect($sourceFields, $destinationFields);
                 break;
-            case 'migrate-parent-form':
-                $masterFields = array_keys($this->getProject()->forms[$config['include-only-form-parent']]['fields']);
-                //remove last field which is complete because its does not exist in the master project
-                $masterFields = $this->removeLastField($masterFields);
+            case 'migrate-source-form':
+                $sourceFields = array_keys($this->getProject()->forms[$config['include-only-form-source']]['fields']);
+                //remove last field which is complete because its does not exist in the source project
+                $sourceFields = $this->removeLastField($sourceFields);
 
-                $childFields = $this->getProjectFields($child);
+                $destinationFields = $this->getProjectFields($destination);
 
-                $arrFields = array_intersect($masterFields, $childFields);
+                $arrFields = array_intersect($sourceFields, $destinationFields);
                 break;
         }
 
@@ -270,7 +270,7 @@ class Master
     }
 
     /**
-     * @param Master | Child $project
+     * @param Source | Destination $project
      */
     private function getProjectFields($project)
     {
@@ -397,8 +397,8 @@ class Master
      */
     public function setRecord()
     {
-        //4. Get data from master to be saved on child
-        //set master record based on selected fields
+        //4. Get data from source to be saved on destination
+        //set source record based on selected fields
         $results = REDCap::getData('json', $this->getRecordId(), $this->getMigrationFields(),
             $this->getEventName());
         $results = json_decode($results, true);
