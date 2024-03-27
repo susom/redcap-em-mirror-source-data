@@ -359,7 +359,9 @@ class Destination
     public function isRecordIdExist()
     {
         $results = REDCap::getData($this->getProjectId(), 'json', $this->getRecordId(), null, $this->getEventName());
-        $results = json_decode($results, true);
+        if(!is_array($results)){
+            $results = json_decode($results, true);
+        }
         $target_results = current($results);
         if ((!empty($target_results))) {
             return true;
