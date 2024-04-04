@@ -452,7 +452,13 @@ class Destination
         $row = db_fetch_row($q);
         if (!empty($row)) {
             $parts = explode("-", $row[0]);
-            $recordId = end($parts) + 1;
+            if(is_int(end($parts))){
+                $recordId = intval(end($parts)) + 1;
+            }else{
+                // if record for dag is a string. xyz_abc
+                $recordId = end($parts) . '_' . rand();
+            }
+
             $this->setDagRecordId($dagId . "-" . $recordId);
         } else {
             $this->setDagRecordId($dagId . "-" . 1);
