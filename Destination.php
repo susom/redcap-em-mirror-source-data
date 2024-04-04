@@ -456,7 +456,9 @@ class Destination
                 $recordId = intval(end($parts)) + 1;
             }else{
                 // if record for dag is a string. xyz_abc
+
                 $recordId = end($parts) . '_' . rand();
+                error_log('Mirror Destination string record with dag:' . $recordId);
             }
 
             $this->setDagRecordId($dagId . "-" . $recordId);
