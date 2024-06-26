@@ -232,20 +232,24 @@ class Destination
 
                 // REDCap Hook injection point: Pass project_id and record name to method
                 // \Hooks::call('redcap_save_record', array($destinationPid, $destination_id, $_GET['page'], $destination_event_name, $group_id, null, null, $_GET['instance']));
-                $result = \Hooks::call('redcap_save_record',
-                    array(
-                        $this->getProjectId(),
-                        $this->getRecordId(),
-                        filter_var($_GET['page'], FILTER_SANITIZE_STRING),
-                        $this->getEventId(),
-                        null,
-                        null,
-                        null,
-                        null
-                    )
-                );
+                if(!empty($this->getProjectId())) {
+                    $result = \Hooks::call('redcap_save_record',
+                        array(
+                            $this->getProjectId(),
+                            $this->getRecordId(),
+                            filter_var($_GET['page'], FILTER_SANITIZE_STRING),
+                            $this->getEventId(),
+                            null,
+                            null,
+                            null,
+                            null
+                        )
+                    );
+                    $this->emDebug('MMD Save Record Hook Result',$result);
+                } else {
+                    $this->emError('MMD Save Record Hook has no project id, skipping save record call (likely a configuration issue) ');
+                }
 
-                $this->emDebug('MMD Save Record Hook Result',$result);
             } else {
                 $this->emDebug('No save record hook');
             }
