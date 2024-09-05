@@ -175,7 +175,7 @@ class Destination
 
         //$result = call_user_func_array(array("Records", "saveData"), $args);
 
-        $this->emDebug("SAVE RESULT", $result);
+        $this->emDebug("SAVE RESULT");
 
 
         // Check for upload errors
@@ -245,7 +245,7 @@ class Destination
                     )
                 );
 
-                $this->emDebug('MMD Save Record Hook Result',$result);
+                $this->emDebug('MMD Save Record Hook Result');
             } else {
                 $this->emDebug('No save record hook');
             }
@@ -502,9 +502,9 @@ class Destination
                 $existing_target_data = current($results);
 
                 $destinationId = $existing_target_data[$destination_id_source_specified_field];
-                $this->emDebug($existing_target_data, $destination_id_source_specified_field,
-                    $this->getRecordId(),
-                    "SOURCE SPECIFIED DESTINATION ID: " . $this->getRecordId());
+//                $this->emDebug($existing_target_data, $destination_id_source_specified_field,
+//                    $this->getRecordId(),
+//                    "SOURCE SPECIFIED DESTINATION ID: " . $this->getRecordId());
                 break;
             case 'destination-id-create-new':
 

@@ -160,7 +160,7 @@ class MirrorSourceDataModule extends \ExternalModules\AbstractExternalModule
                     foreach ($this->getDagMaps() as $dag) {
                         $config['source-destination-dags'] = json_encode($dag);
                         $this->setDagId($dag['destination']);
-                        $this->emDebug("config", $config);
+                        //$this->emDebug("config", $config);
 
 
                         //exception when user is super user then add only the record to destination dag mapped to the source dag
@@ -186,7 +186,7 @@ class MirrorSourceDataModule extends \ExternalModules\AbstractExternalModule
                         $this->getSource()->updateNotes($config, USERID . " is not assigned to any destination DAG");
                     }
                 } else {
-                    $this->emDebug("config", $config);
+                   // $this->emDebug("config", $config);
                     $this->getSource()->canUpdateNotes = $this->mirrorData($config);
                     //when done sub-setting loop check if mirror completed if so run finalize mirror.
                     if ($this->getSource()->canUpdateNotes) {
@@ -271,7 +271,7 @@ class MirrorSourceDataModule extends \ExternalModules\AbstractExternalModule
             // Timestamp present - do not re-migrate
             $message = "No data migration: Clobber not turned on and migration already completed for record "
                 . $this->getSource()->getRecordId() . " to destination project " . $this->getDestination()->getProjectId() . '. To re-save the record in the destination project please reset the value in following field: ' . $config['migration-timestamp'];
-            $this->emDebug($message);
+           // $this->emDebug($message);
 
             // //reset the migration timestamp and destination_id
             //$log_data = array();
@@ -285,12 +285,12 @@ class MirrorSourceDataModule extends \ExternalModules\AbstractExternalModule
             return false;
         }
 
-        $this->emDebug("Doing data migration",
-            "Clobber: " . $destination_field_clobber,
-            "Migration timestamp: " . $migrationTimestamp,
-            "Record: " . $this->getSource()->getRecordId(),
-            "Destination project: " . $this->getDestination()->getProjectId()
-        );
+//        $this->emDebug("Doing data migration",
+//            "Clobber: " . $destination_field_clobber,
+//            "Migration timestamp: " . $migrationTimestamp,
+//            "Record: " . $this->getSource()->getRecordId(),
+//            "Destination project: " . $this->getDestination()->getProjectId()
+//        );
 
         return true;
     }
@@ -414,7 +414,7 @@ class MirrorSourceDataModule extends \ExternalModules\AbstractExternalModule
         //0. CHECK if in right EVENT (only applies if source-event-name is not null)
         $this->setTriggerEvent($config['source-event-name']);
 
-        $this->emDebug("Trigger event", $this->getTriggerEvent(), "Current Event", $this->getSource()->getEventId());
+        //$this->emDebug("Trigger event", $this->getTriggerEvent(), "Current Event", $this->getSource()->getEventId());
 
         // If event is specified but different than current event, then we can abort
         if ((!empty($this->getTriggerEvent())) && ($this->getTriggerEvent() != $this->getSource()->getEventId())) {
@@ -442,7 +442,7 @@ class MirrorSourceDataModule extends \ExternalModules\AbstractExternalModule
         $this->getSource()->setMigrationFields($config, $this->getDestination());
 
 
-        $this->emDebug("Intersection is " . count($this->getSource()->getMigrationFields()));
+        //$this->emDebug("Intersection is " . count($this->getSource()->getMigrationFields()));
 
         if (empty($this->getSource()->getMigrationFields())) {
             //Log msg in Notes field
@@ -528,10 +528,9 @@ class MirrorSourceDataModule extends \ExternalModules\AbstractExternalModule
             //  3. true if passes
             //report error if anything but a pass
             if ($result !== true) {
-                $msg = "Error creating record in DESTINATION project " . $this->getDestination()->getProjectId() . " - ask administrator to review logs: " . print_r($result,
-                        true);
+                $msg = "Error creating record in DESTINATION project " . $this->getDestination()->getProjectId() . " - ask administrator to review logs: ";
                 $this->emError($msg);
-                $this->emError("DESTINATION ERROR", $result);
+                $this->emError("DESTINATION ERROR");
                 $data[$config['migration-notes']] = $msg;
 
                 //update source notes

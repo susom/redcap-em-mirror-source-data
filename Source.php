@@ -144,8 +144,8 @@ class Source
             $msg = "Error creating record in SOURCE project " . $this->getProjectId() . " - ask administrator to review logs: " . json_encode($result) . " - " . json_encode($params);
             //$sr->updateFinalReviewNotes($msg);
             //todo: bubble up to user : should this be sent to logging?
-            $this->emError($msg);
-            $this->emError("RESULT OF SOURCE: " . print_r($result, true));
+//            $this->emError($msg);
+//            $this->emError("RESULT OF SOURCE: " . print_r($result, true));
             //logEvent($description, $changes_made="", $sql="", $record=null, $event_id=null, $project_id=null);
             REDCap::logEvent("Mirror Source Data Module", $msg, null, $this->getRecordId(),
                 $config['source-event-name']);
@@ -162,7 +162,7 @@ class Source
         } else {
             $data[$this->getSurveyField()] = $link;
             $data[REDCap::getRecordIdField()] = $this->getRecordId();
-            $this->emLog($data, "Saving Source Survey Link");
+            //$this->emLog($data, "Saving Source Survey Link");
             $result = REDCap::saveData(
                 $this->getProjectId(),
                 'json',
