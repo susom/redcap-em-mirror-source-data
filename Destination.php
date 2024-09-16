@@ -175,7 +175,7 @@ class Destination
 
         //$result = call_user_func_array(array("Records", "saveData"), $args);
 
-        $this->emDebug("SAVE RESULT");
+        $this->emDebug("SAVE RESULT", $result);
 
 
         // Check for upload errors
@@ -232,7 +232,6 @@ class Destination
 
                 // REDCap Hook injection point: Pass project_id and record name to method
                 // \Hooks::call('redcap_save_record', array($destinationPid, $destination_id, $_GET['page'], $destination_event_name, $group_id, null, null, $_GET['instance']));
-
                 if(!empty($this->getProjectId())) {
                     $result = \Hooks::call('redcap_save_record',
                         array(
@@ -246,11 +245,10 @@ class Destination
                             null
                         )
                     );
-                    $this->emDebug('MMD Save Record Hook Result');
+                    $this->emDebug('MMD Save Record Hook Result',$result);
                 } else {
                     $this->emError('MMD Save Record Hook has no project id, skipping save record call (likely a configuration issue) ');
                 }
-
 
             } else {
                 $this->emDebug('No save record hook');
@@ -365,9 +363,7 @@ class Destination
     public function isRecordIdExist()
     {
         $results = REDCap::getData($this->getProjectId(), 'json', $this->getRecordId(), null, $this->getEventName());
-        if(!is_array($results)){
-            $results = json_decode($results, true);
-        }
+        $results = json_decode($results, true);
         $target_results = current($results);
         if ((!empty($target_results))) {
             return true;
@@ -458,15 +454,7 @@ class Destination
         $row = db_fetch_row($q);
         if (!empty($row)) {
             $parts = explode("-", $row[0]);
-            if(is_int(end($parts))){
-                $recordId = intval(end($parts)) + 1;
-            }else{
-                // if record for dag is a string. xyz_abc
-
-                $recordId = end($parts) . '_' . rand();
-                error_log('Mirror Destination string record with dag:' . $recordId);
-            }
-
+            $recordId = end($parts) + 1;
             $this->setDagRecordId($dagId . "-" . $recordId);
         } else {
             $this->setDagRecordId($dagId . "-" . 1);
@@ -508,9 +496,9 @@ class Destination
                 $existing_target_data = current($results);
 
                 $destinationId = $existing_target_data[$destination_id_source_specified_field];
-//                $this->emDebug($existing_target_data, $destination_id_source_specified_field,
-//                    $this->getRecordId(),
-//                    "SOURCE SPECIFIED DESTINATION ID: " . $this->getRecordId());
+                $this->emDebug($existing_target_data, $destination_id_source_specified_field,
+                    $this->getRecordId(),
+                    "SOURCE SPECIFIED DESTINATION ID: " . $this->getRecordId());
                 break;
             case 'destination-id-create-new':
 
