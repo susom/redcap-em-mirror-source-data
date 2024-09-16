@@ -531,7 +531,8 @@ class MirrorSourceDataModule extends \ExternalModules\AbstractExternalModule
                 $msg = "Error creating record in DESTINATION project " . $this->getDestination()->getProjectId() . " - ask administrator to review logs: " . print_r($result,
                         true);
                 $this->emError($msg);
-                $this->emError("DESTINATION ERROR", $result);
+//                $this->emError("DESTINATION ERROR", $result);
+                $this->emError("DESTINATION ERROR");
                 $data[$config['migration-notes']] = $msg;
 
                 //update source notes

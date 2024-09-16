@@ -145,7 +145,8 @@ class Source
             //$sr->updateFinalReviewNotes($msg);
             //todo: bubble up to user : should this be sent to logging?
             $this->emError($msg);
-            $this->emError("RESULT OF SOURCE: " . print_r($result, true));
+//            $this->emError("RESULT OF SOURCE: " . print_r($result, true));
+            $this->emError("RESULT OF SOURCE: ");
             //logEvent($description, $changes_made="", $sql="", $record=null, $event_id=null, $project_id=null);
             REDCap::logEvent("Mirror Source Data Module", $msg, null, $this->getRecordId(),
                 $config['source-event-name']);
@@ -162,7 +163,8 @@ class Source
         } else {
             $data[$this->getSurveyField()] = $link;
             $data[REDCap::getRecordIdField()] = $this->getRecordId();
-            $this->emLog($data, "Saving Source Survey Link");
+//            $this->emLog($data, "Saving Source Survey Link");
+            $this->emLog("Saving Source Survey Link");
             $result = REDCap::saveData(
                 $this->getProjectId(),
                 'json',
