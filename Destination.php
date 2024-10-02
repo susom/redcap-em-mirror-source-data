@@ -175,7 +175,7 @@ class Destination
 
         //$result = call_user_func_array(array("Records", "saveData"), $args);
 
-        $this->emDebug("SAVE RESULT");
+        $this->emDebug("SAVE RESULT", $result);
 
 
         // Check for upload errors
