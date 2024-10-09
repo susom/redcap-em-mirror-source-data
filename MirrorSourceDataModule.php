@@ -164,7 +164,7 @@ class MirrorSourceDataModule extends \ExternalModules\AbstractExternalModule
 
 
                         //exception when user is super user then add only the record to destination dag mapped to the source dag
-                        if (SUPER_USER && $dag['source'] == $group_id) {
+                        if (defined('SUPER_USER') && SUPER_USER && $dag['source'] == $group_id) {
 
                             $this->getSource()->canUpdateNotes = $this->mirrorData($config);
                             $this->setUserInDestinationDag(true);
