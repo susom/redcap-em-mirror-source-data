@@ -243,7 +243,7 @@ class Source
 
 
         //lastly remove exclude fields if specified
-        if (count($config['exclude-fields']) > 0) {
+        if (count($config['exclude-fields']?:[]) > 0) {
             $arrFields = $this->removeExcludedFields($arrFields, $config);
         }
 
